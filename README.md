@@ -40,7 +40,7 @@ Key differences between the Linux and macOS ARM build scripts:
 
 Linux (build-linux-amd.sh):
   - Builds a custom SQLite library with extension loading flags
-  - Uses complex CGO linking against the custom SQLite (CGO_LDFLAGS="$SQLITE_INSTALL_DIR/lib/libsqlite3.a -lm 
+  - Uses complex CGO linking against the custom SQLite (CGO_LDFLAGS="$SQLITE_INSTALL_DIR/lib/libsqlite3.a -lm
   -ldl")
   - Downloads/builds sqlite-autoconf-3450200 with extension loading enabled
   - Creates a build directory structure
@@ -64,7 +64,7 @@ Common elements:
 @@ -1477,6 +1477,8 @@ func (d *SQLiteDriver) Open(dsn string) (driver.Conn, error) {
                 return nil, errors.New("sqlite succeeded without returning a database")
         }
- 
+
 +        C.sqlite3_enable_load_extension(db, 1);
 +
         exec := func(s string) error {
