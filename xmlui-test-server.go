@@ -244,7 +244,6 @@ func singleStatementGate(q string) error {
 }
 
 // ===== Identity → role via env allowlists =====
-// Accepts Hello sub or email (comma-separated): READERS, WRITERS
 // Accepts Hello sub and/or email (comma-separated): READERS, WRITERS
 func mapRoleFromAllowlists(claims map[string]interface{}) (string, bool) {
 	// candidate IDs to match against env lists (normalize to lower)
