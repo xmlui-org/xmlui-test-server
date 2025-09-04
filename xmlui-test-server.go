@@ -2,26 +2,199 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	_ "github.com/lib/pq"           // PostgreSQL driver
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
+
+// ===== Auth / Policy =====
+
+const roleReader = "reader"
+const roleWriter = "writer"
+
+type jwksCache struct {
+	keys map[string]*rsa.PublicKey
+	exp  time.Time
+	ttl  time.Duration
+	mu   sync.Mutex
+}
+
+func (j *jwksCache) getKey(ctx context.Context, issuer, overrideJWKS, kid string) (*rsa.PublicKey, error) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	now := time.Now()
+	if k, ok := j.keys[kid]; ok && now.Before(j.exp) {
+		return k, nil
+	}
+	jwksURI := overrideJWKS
+	if jwksURI == "" {
+		wk := issuer
+		if !strings.HasSuffix(wk, "/") {
+			wk += "/"
+		}
+		wk += ".well-known/openid-configuration"
+		req, _ := http.NewRequestWithContext(ctx, "GET", wk, nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("oidc discovery: %w", err)
+		}
+		defer resp.Body.Close()
+		var conf struct{ JWKSURI string `json:"jwks_uri"` }
+		if err := json.NewDecoder(resp.Body).Decode(&conf); err != nil {
+			return nil, fmt.Errorf("oidc config decode: %w", err)
+		}
+		jwksURI = conf.JWKSURI
+	}
+	req, _ := http.NewRequestWithContext(ctx, "GET", jwksURI, nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("jwks fetch: %w", err)
+	}
+	defer resp.Body.Close()
+	var jwks struct {
+		Keys []struct {
+			Kty string `json:"kty"`
+			Kid string `json:"kid"`
+			N   string `json:"n"`
+			E   string `json:"e"`
+			Use string `json:"use"`
+			Alg string `json:"alg"`
+		} `json:"keys"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+		return nil, fmt.Errorf("jwks decode: %w", err)
+	}
+	newMap := map[string]*rsa.PublicKey{}
+	for _, k := range jwks.Keys {
+		if k.Kty != "RSA" || k.Use != "sig" {
+			continue
+		}
+		nb, err := base64.RawURLEncoding.DecodeString(k.N)
+		if err != nil {
+			continue
+		}
+		eb, err := base64.RawURLEncoding.DecodeString(k.E)
+		if err != nil {
+			continue
+		}
+		e := 0
+		for i := 0; i < len(eb); i++ {
+			e = (e << 8) + int(eb[i])
+		}
+		if e == 0 {
+			e = 65537
+		}
+		pub := &rsa.PublicKey{N: new(big.Int).SetBytes(nb), E: e}
+		newMap[k.Kid] = pub
+	}
+	j.keys = newMap
+	j.exp = now.Add(j.ttl)
+	if k, ok := j.keys[kid]; ok {
+		return k, nil
+	}
+	return nil, fmt.Errorf("kid %s not found in JWKS", kid)
+}
+
+func (s *Server) verifyIDToken(ctx context.Context, token string) (map[string]interface{}, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("malformed JWT")
+	}
+	hb, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("bad header b64")
+	}
+	var hdr struct{ Alg, Kid, Typ string }
+	if err := json.Unmarshal(hb, &hdr); err != nil {
+		return nil, fmt.Errorf("bad header json")
+	}
+	if hdr.Alg != "RS256" {
+		return nil, fmt.Errorf("unsupported alg")
+	}
+	pb, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("bad payload b64")
+	}
+	var claims map[string]interface{}
+	if err := json.Unmarshal(pb, &claims); err != nil {
+		return nil, fmt.Errorf("bad payload json")
+	}
+	pub, err := s.jwksCache.getKey(ctx, s.helloIssuer, s.jwksURL, hdr.Kid)
+	if err != nil {
+		return nil, fmt.Errorf("jwks: %w", err)
+	}
+	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		return nil, fmt.Errorf("bad sig b64")
+	}
+	h := sha256.Sum256([]byte(parts[0] + "." + parts[1]))
+	if err := rsa.VerifyPKCS1v15(pub, crypto.SHA256, h[:], sig); err != nil {
+		return nil, fmt.Errorf("bad signature")
+	}
+	if iss, _ := claims["iss"].(string); iss != s.helloIssuer {
+		return nil, fmt.Errorf("iss mismatch")
+	}
+	okAud := false
+	switch a := claims["aud"].(type) {
+	case string:
+		okAud = (a == s.helloClientID)
+	case []interface{}:
+		for _, v := range a {
+			if vs, _ := v.(string); vs == s.helloClientID {
+				okAud = true
+				break
+			}
+		}
+	}
+	if !okAud {
+		return nil, fmt.Errorf("aud mismatch")
+	}
+	now := time.Now().Unix()
+	exp := toInt64(claims["exp"])
+	nbf := toInt64(claims["nbf"])
+	leeway := int64(s.tokenLeeway.Seconds())
+	if exp != 0 && now > exp+leeway {
+		return nil, fmt.Errorf("token expired")
+	}
+	if nbf != 0 && now+leeway < nbf {
+		return nil, fmt.Errorf("token not yet valid")
+	}
+	return claims, nil
+}
+
+func toInt64(v interface{}) int64 {
+	switch t := v.(type) {
+	case float64:
+		return int64(t)
+	case int64:
+		return t
+	case json.Number:
+		i, _ := t.Int64()
+		return i
+	default:
+		return 0
+	}
+}
 
 // ===== Data Structures =====
 
@@ -30,7 +203,6 @@ type QueryRequest struct {
 	Params []interface{} `json:"params"`
 }
 
-// API Description structures
 type APIDescription struct {
 	APIVersion  string               `json:"apiVersion"`
 	Name        string               `json:"name"`
@@ -54,12 +226,18 @@ type MethodDefinition struct {
 type Server struct {
 	db            *sql.DB
 	apiDesc       *APIDescription
-	apiDescPath   string                    // Path to the API description file
-	pathRegexps   map[string]*regexp.Regexp // Cache for compiled path regexps
-	showResponses bool                      // Flag to enable/disable response logging
-	dbType        string                    // Type of database: "sqlite" or "postgres"
-	mu            sync.Mutex                // Mutex to serialize DB access
+	apiDescPath   string
+	pathRegexps   map[string]*regexp.Regexp
+	showResponses bool
+	dbType        string
+	helloIssuer   string
+	helloClientID string
+	jwksURL       string
+	tokenLeeway   time.Duration
+	jwksCache     *jwksCache
+	mu            sync.Mutex
 }
+
 
 // ===== Server Initialization =====
 
@@ -322,24 +500,61 @@ func extractBodyParams(r *http.Request) (map[string]interface{}, error) {
 
 // ===== SQL Execution =====
 
+// ===== SQL Execution =====
+
 // Execute SQL query and return results as maps
-func (s *Server) executeQuery(sqlQuery string, params []interface{}) ([]map[string]interface{}, error) {
+func (s *Server) executeQuery(ctx context.Context, role string, sqlQuery string, params []interface{}) ([]map[string]interface{}, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Log the SQL query (just once)
 	log.Printf("SQL: %s", sqlQuery)
 
+	// Readers: enforce single-statement + disallow session/tx mutators
+	if role == roleReader {
+		if err := singleStatementGate(sqlQuery); err != nil {
+			return nil, fmt.Errorf("reader policy: %w", err)
+		}
+	}
+
 	// Handle PostgreSQL parameter placeholders ($1, $2, etc.) vs SQLite (?, ?, etc.)
 	if s.dbType == "postgres" {
-		// Replace ? with $1, $2, etc. for PostgreSQL
 		for i := 1; i <= len(params); i++ {
 			sqlQuery = strings.Replace(sqlQuery, "?", fmt.Sprintf("$%d", i), 1)
 		}
 	}
 
-	// Execute the query
-	rows, err := s.db.Query(sqlQuery, params...)
+	var rows *sql.Rows
+	var err error
+
+	// Execute with read-only enforcement for readers
+	if role == roleReader {
+		switch s.dbType {
+		case "postgres":
+			tx, txErr := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+			if txErr != nil {
+				return nil, txErr
+			}
+			rows, err = tx.QueryContext(ctx, sqlQuery, params...)
+			if err != nil {
+				_ = tx.Rollback()
+				return nil, err
+			}
+			if cErr := tx.Commit(); cErr != nil {
+				return nil, cErr
+			}
+		case "sqlite":
+			if _, err := s.db.Exec(`PRAGMA query_only=ON`); err != nil {
+				return nil, fmt.Errorf("sqlite query_only: %w", err)
+			}
+			defer func() { _, _ = s.db.Exec(`PRAGMA query_only=OFF`) }()
+			rows, err = s.db.Query(sqlQuery, params...)
+		default:
+			rows, err = s.db.Query(sqlQuery, params...)
+		}
+	} else {
+		rows, err = s.db.Query(sqlQuery, params...)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -354,48 +569,31 @@ func (s *Server) executeQuery(sqlQuery string, params []interface{}) ([]map[stri
 	// Process result rows
 	var result []map[string]interface{}
 	for rows.Next() {
-		// Create values slice with appropriate length
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
 		for i := range columns {
 			valuePtrs[i] = &values[i]
 		}
-
-		// Scan the row into values
 		if err := rows.Scan(valuePtrs...); err != nil {
 			return nil, err
 		}
-
-		// Create a map for this row
 		entry := make(map[string]interface{})
 		for i, col := range columns {
-			var v interface{}
 			val := values[i]
-			b, ok := val.([]byte)
-			if ok {
-				v = string(b)
+			if b, ok := val.([]byte); ok {
+				entry[col] = string(b)
 			} else {
-				v = val
+				entry[col] = val
 			}
-			entry[col] = v
 		}
-
-		// Add the row to the result
 		result = append(result, entry)
 	}
-
-	// Check for errors after iteration
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-
-	// Log the response if enabled
-	if s.showResponses {
-		// Response logging is done in sendJSONResponse
-	}
-
 	return result, nil
 }
+
 
 // ===== HTTP Response Handling =====
 
@@ -433,6 +631,7 @@ func sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 	log.Printf("Error: %s (Status: %d)", message, statusCode)
 	http.Error(w, message, statusCode)
 }
+
 
 // ===== Request Handlers =====
 
@@ -773,8 +972,8 @@ func main() {
 	}
 
 	// Start server
-	log.Printf("Server listening on localhost:%s...", portValue)
-	if err := http.ListenAndServe("127.0.0.1:"+portValue, corsMiddleware(mux)); err != nil {
+	log.Printf("Server listening on %s...", portValue)
+        if err := http.ListenAndServe("0.0.0.0:"+portValue, corsMiddleware(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
