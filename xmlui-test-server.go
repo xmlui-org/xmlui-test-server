@@ -62,7 +62,9 @@ func (j *jwksCache) getKey(ctx context.Context, issuer, overrideJWKS, kid string
 			return nil, fmt.Errorf("oidc discovery: %w", err)
 		}
 		defer resp.Body.Close()
-		var conf struct{ JWKSURI string `json:"jwks_uri"` }
+		var conf struct {
+			JWKSURI string `json:"jwks_uri"`
+		}
 		if err := json.NewDecoder(resp.Body).Decode(&conf); err != nil {
 			return nil, fmt.Errorf("oidc config decode: %w", err)
 		}
@@ -243,33 +245,40 @@ func singleStatementGate(q string) error {
 
 // ===== Identity → role via env allowlists =====
 // Accepts Hello sub or email (comma-separated): READERS, WRITERS
+// Accepts Hello sub and/or email (comma-separated): READERS, WRITERS
 func mapRoleFromAllowlists(claims map[string]interface{}) (string, bool) {
-	id := ""
+	// candidate IDs to match against env lists (normalize to lower)
+	candidates := []string{}
 	if sub, _ := claims["sub"].(string); sub != "" {
-		id = sub
+		candidates = append(candidates, strings.ToLower(strings.TrimSpace(sub)))
 	}
-	if id == "" {
-		if em, _ := claims["email"].(string); em != "" {
-			id = strings.ToLower(em)
-		}
+	if em, _ := claims["email"].(string); em != "" {
+		candidates = append(candidates, strings.ToLower(strings.TrimSpace(em)))
 	}
-	if id == "" {
+	if len(candidates) == 0 {
 		return "", false
 	}
-	in := func(env string) bool {
+	// build env set once
+	toSet := func(env string) map[string]struct{} {
+		m := map[string]struct{}{}
 		for _, item := range strings.Split(os.Getenv(env), ",") {
-			item = strings.TrimSpace(strings.ToLower(item))
-			if item != "" && item == strings.ToLower(id) {
-				return true
+			item = strings.ToLower(strings.TrimSpace(item))
+			if item != "" {
+				m[item] = struct{}{}
 			}
 		}
-		return false
+		return m
 	}
-	if in("WRITERS") {
-		return roleWriter, true
-	}
-	if in("READERS") {
-		return roleReader, true
+	writers := toSet("WRITERS")
+	readers := toSet("READERS")
+	// match any candidate
+	for _, c := range candidates {
+		if _, ok := writers[c]; ok {
+			return roleWriter, true
+		}
+		if _, ok := readers[c]; ok {
+			return roleReader, true
+		}
 	}
 	return "", false
 }
@@ -338,7 +347,6 @@ type Server struct {
 	jwksCache     *jwksCache
 	mu            sync.Mutex
 }
-
 
 // ===== Server Initialization =====
 
@@ -629,6 +637,7 @@ func (s *Server) executeQuery(ctx context.Context, role string, sqlQuery string,
 	var err error
 
 	// Execute with read-only enforcement for readers
+
 	if role == roleReader {
 		switch s.dbType {
 		case "postgres":
@@ -636,14 +645,46 @@ func (s *Server) executeQuery(ctx context.Context, role string, sqlQuery string,
 			if txErr != nil {
 				return nil, txErr
 			}
+			defer tx.Rollback()
+
 			rows, err = tx.QueryContext(ctx, sqlQuery, params...)
 			if err != nil {
-				_ = tx.Rollback()
 				return nil, err
 			}
-			if cErr := tx.Commit(); cErr != nil {
-				return nil, cErr
+			defer rows.Close()
+
+			// Build result set inside the transaction
+			columns, err := rows.Columns()
+			if err != nil {
+				return nil, err
 			}
+			var result []map[string]interface{}
+			for rows.Next() {
+				values := make([]interface{}, len(columns))
+				ptrs := make([]interface{}, len(columns))
+				for i := range columns {
+					ptrs[i] = &values[i]
+				}
+				if err := rows.Scan(ptrs...); err != nil {
+					return nil, err
+				}
+				row := make(map[string]interface{}, len(columns))
+				for i, col := range columns {
+					if b, ok := values[i].([]byte); ok {
+						row[col] = string(b)
+					} else {
+						row[col] = values[i]
+					}
+				}
+				result = append(result, row)
+			}
+			if err := rows.Err(); err != nil {
+				return nil, err
+			}
+			if err := tx.Commit(); err != nil {
+				return nil, err
+			}
+			return result, nil
 		case "sqlite":
 			if _, err := s.db.Exec(`PRAGMA query_only=ON`); err != nil {
 				return nil, fmt.Errorf("sqlite query_only: %w", err)
@@ -656,6 +697,7 @@ func (s *Server) executeQuery(ctx context.Context, role string, sqlQuery string,
 	} else {
 		rows, err = s.db.Query(sqlQuery, params...)
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -695,7 +737,6 @@ func (s *Server) executeQuery(ctx context.Context, role string, sqlQuery string,
 	return result, nil
 }
 
-
 // ===== HTTP Response Handling =====
 
 // Send JSON response with the given status code
@@ -733,16 +774,17 @@ func sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 	http.Error(w, message, statusCode)
 }
 
-
 // ===== Request Handlers =====
 
 // Handle API requests based on the API description
 func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 	log.Printf("API: %s %s", r.Method, r.URL.Path)
 
-		// NEW: authN/Z
+	// NEW: authN/Z
 	ctx, role, ok := s.authenticateAndAuthorize(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	if s.apiDesc == nil {
 		sendErrorResponse(w, "API description not loaded", http.StatusInternalServerError)
@@ -839,7 +881,9 @@ func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 
 	// NEW: authN/Z
 	ctx, role, ok := s.authenticateAndAuthorize(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	if r.Method != "POST" {
 		sendErrorResponse(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
@@ -993,7 +1037,6 @@ func main() {
 	jwksURL := flag.String("hello-jwks-url", "", "Override JWKS URL (optional)")
 	tokenLeeway := flag.Int("token-leeway-seconds", 60, "Token clock skew leeway in seconds (optional)")
 
-
 	// Short-form alias for show-responses
 	var shortShowResponses bool
 	flag.BoolVar(&shortShowResponses, "s", false, "Enable logging of SQL query responses (shorthand)")
@@ -1090,7 +1133,7 @@ func main() {
 	log.Printf("- API Description: %s", *apiDesc)
 	log.Printf("- Extension: %s", *extension)
 	log.Printf("- Show Responses: %v", showResponsesEnabled)
-    log.Printf("- Auth: issuer=%s client_id=%s (READERS/WRITERS via env)", server.helloIssuer, server.helloClientID)
+	log.Printf("- Auth: issuer=%s client_id=%s (READERS/WRITERS via env)", server.helloIssuer, server.helloClientID)
 
 	if *pgConnStr != "" {
 		log.Printf("- Database: PostgreSQL")
@@ -1101,7 +1144,7 @@ func main() {
 
 	// Start server
 	log.Printf("Server listening on %s...", portValue)
-        if err := http.ListenAndServe("0.0.0.0:"+portValue, corsMiddleware(mux)); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:"+portValue, corsMiddleware(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
