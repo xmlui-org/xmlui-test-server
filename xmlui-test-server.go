@@ -18,7 +18,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -194,6 +197,104 @@ func toInt64(v interface{}) int64 {
 	default:
 		return 0
 	}
+}
+
+// ===== Statement Gate (conservative) =====
+var denyPattern = regexp.MustCompile(`(?is)\b(begin|commit|rollback|set|reset|lock|copy|call|do)\b|for\s+update`)
+
+func singleStatementGate(q string) error {
+	// strip /* */ block comments
+	noBlock := regexp.MustCompile(`/\*.*?\*/`).ReplaceAllString(q, " ")
+	// strip -- line comments
+	lines := strings.Split(noBlock, "\n")
+	var b strings.Builder
+	for _, ln := range lines {
+		if idx := strings.Index(ln, "--"); idx >= 0 {
+			ln = ln[:idx]
+		}
+		b.WriteString(ln)
+		b.WriteByte('\n')
+	}
+	s := strings.TrimSpace(b.String())
+	// count semicolons outside single-quoted strings
+	inStr := false
+	semi := 0
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if ch == '\'' {
+			inStr = !inStr
+		}
+		if ch == ';' && !inStr {
+			semi++
+		}
+	}
+	// Allow 0 semicolons, or exactly 1 if it's terminal
+	if semi > 1 {
+		return fmt.Errorf("multiple statements not allowed")
+	}
+	if semi == 1 && !strings.HasSuffix(strings.TrimSpace(s), ";") {
+		return fmt.Errorf("semicolon not at end: multiple statements not allowed")
+	}
+	if denyPattern.MatchString(s) {
+		return fmt.Errorf("disallowed SQL construct for reader")
+	}
+	return nil
+}
+
+// ===== Identity → role via env allowlists =====
+// Accepts Hello sub or email (comma-separated): READERS, WRITERS
+func mapRoleFromAllowlists(claims map[string]interface{}) (string, bool) {
+	id := ""
+	if sub, _ := claims["sub"].(string); sub != "" {
+		id = sub
+	}
+	if id == "" {
+		if em, _ := claims["email"].(string); em != "" {
+			id = strings.ToLower(em)
+		}
+	}
+	if id == "" {
+		return "", false
+	}
+	in := func(env string) bool {
+		for _, item := range strings.Split(os.Getenv(env), ",") {
+			item = strings.TrimSpace(strings.ToLower(item))
+			if item != "" && item == strings.ToLower(id) {
+				return true
+			}
+		}
+		return false
+	}
+	if in("WRITERS") {
+		return roleWriter, true
+	}
+	if in("READERS") {
+		return roleReader, true
+	}
+	return "", false
+}
+
+// ===== AuthN/Z entrypoint =====
+func (s *Server) authenticateAndAuthorize(w http.ResponseWriter, r *http.Request) (context.Context, string, bool) {
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+		sendErrorResponse(w, "missing bearer token", http.StatusUnauthorized)
+		return r.Context(), "", false
+	}
+	token := strings.TrimSpace(auth[len("Bearer "):])
+	claims, err := s.verifyIDToken(r.Context(), token)
+	if err != nil {
+		sendErrorResponse(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
+		return r.Context(), "", false
+	}
+	role, ok := mapRoleFromAllowlists(claims)
+	if !ok {
+		sendErrorResponse(w, "forbidden: no role", http.StatusForbidden)
+		return r.Context(), "", false
+	}
+	// attach claims if you want to use later
+	ctx := context.WithValue(r.Context(), struct{}{}, claims)
+	return ctx, role, true
 }
 
 // ===== Data Structures =====
@@ -639,6 +740,10 @@ func sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 	log.Printf("API: %s %s", r.Method, r.URL.Path)
 
+		// NEW: authN/Z
+	ctx, role, ok := s.authenticateAndAuthorize(w, r)
+	if !ok { return }
+
 	if s.apiDesc == nil {
 		sendErrorResponse(w, "API description not loaded", http.StatusInternalServerError)
 		return
@@ -718,7 +823,7 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute the query
-	result, err := s.executeQuery(sqlQuery, sqlParams)
+	result, err := s.executeQuery(ctx, role, sqlQuery, sqlParams)
 	if err != nil {
 		sendErrorResponse(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 		return
@@ -731,6 +836,10 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 // Handle direct SQL query requests
 func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Query: %s", r.URL.Path)
+
+	// NEW: authN/Z
+	ctx, role, ok := s.authenticateAndAuthorize(w, r)
+	if !ok { return }
 
 	if r.Method != "POST" {
 		sendErrorResponse(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
@@ -756,7 +865,7 @@ func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute the query
-	result, err := s.executeQuery(req.SQL, req.Params)
+	result, err := s.executeQuery(ctx, role, req.SQL, req.Params)
 	if err != nil {
 		sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -879,6 +988,11 @@ func main() {
 	showResponses := flag.Bool("show-responses", false, "Enable logging of SQL query responses")
 	pgConnStr := flag.String("pg-conn", "", "PostgreSQL connection string (if provided, use PostgreSQL instead of SQLite)")
 	pgPort := flag.String("pg-port", "", "PostgreSQL port (optional, overrides port in --pg-conn if provided)")
+	helloIssuer := flag.String("hello-issuer", "https://issuer.hello.coop", "Hello OIDC issuer URL")
+	helloClientID := flag.String("hello-client-id", "", "OIDC client_id (audience for ID-token fallback)")
+	jwksURL := flag.String("hello-jwks-url", "", "Override JWKS URL (optional)")
+	tokenLeeway := flag.Int("token-leeway-seconds", 60, "Token clock skew leeway in seconds (optional)")
+
 
 	// Short-form alias for show-responses
 	var shortShowResponses bool
@@ -901,6 +1015,18 @@ func main() {
 	showResponsesEnabled := *showResponses || shortShowResponses
 	finalPgConnStr := injectPgPort(*pgConnStr, *pgPort)
 	server, err := NewServer(*dbPath, finalPgConnStr, *extension, *apiDesc, showResponsesEnabled)
+	// wire auth config
+	server.helloIssuer = *helloIssuer
+	server.helloClientID = *helloClientID
+	server.jwksURL = *jwksURL
+	server.tokenLeeway = time.Duration(*tokenLeeway) * time.Second
+	if server.jwksCache == nil {
+		server.jwksCache = &jwksCache{keys: map[string]*rsa.PublicKey{}, ttl: 12 * time.Hour}
+	}
+	if server.helloClientID == "" {
+		log.Println("WARNING: --hello-client-id not set; token 'aud' will fail verification")
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -964,6 +1090,8 @@ func main() {
 	log.Printf("- API Description: %s", *apiDesc)
 	log.Printf("- Extension: %s", *extension)
 	log.Printf("- Show Responses: %v", showResponsesEnabled)
+    log.Printf("- Auth: issuer=%s client_id=%s (READERS/WRITERS via env)", server.helloIssuer, server.helloClientID)
+
 	if *pgConnStr != "" {
 		log.Printf("- Database: PostgreSQL")
 	} else {
