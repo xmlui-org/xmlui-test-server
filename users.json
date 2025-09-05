@@ -1,0 +1,18 @@
+{
+  "users": {
+    "hello_sub_example_123": {
+      "sub": "hello_sub_example_123",
+      "email": "demo@example.com",
+      "role": "writer",
+      "created_at": "2025-01-15T10:00:00Z",
+      "last_login": "2025-01-15T10:00:00Z"
+    },
+    "hello_sub_example_456": {
+      "sub": "hello_sub_example_456", 
+      "email": "reader@example.com",
+      "role": "reader",
+      "created_at": "2025-01-15T10:00:00Z",
+      "last_login": "2025-01-15T10:00:00Z"
+    }
+  }
+}
