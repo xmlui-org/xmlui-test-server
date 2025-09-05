@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/hmac"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"database/sql"
@@ -34,6 +36,84 @@ import (
 
 const roleReader = "reader"
 const roleWriter = "writer"
+
+// ===== User Management =====
+type User struct {
+	Sub       string    `json:"sub"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	LastLogin time.Time `json:"last_login"`
+}
+
+type UserStore struct {
+	Users map[string]*User `json:"users"`
+	mu    sync.RWMutex
+}
+
+type Session struct {
+	Sub       string    `json:"sub"`
+	Role      string    `json:"role"`
+	ExpiresAt time.Time `json:"exp"`
+}
+
+func loadUsers(filePath string) (*UserStore, error) {
+	store := &UserStore{Users: make(map[string]*User)}
+	
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		log.Printf("Users file %s doesn't exist, starting with empty user store", filePath)
+		return store, nil
+	}
+	
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read users file: %w", err)
+	}
+	
+	if err := json.Unmarshal(data, store); err != nil {
+		return nil, fmt.Errorf("failed to parse users file: %w", err)
+	}
+	
+	log.Printf("Loaded %d users from %s", len(store.Users), filePath)
+	return store, nil
+}
+
+func (us *UserStore) save(filePath string) error {
+	us.mu.RLock()
+	defer us.mu.RUnlock()
+	
+	data, err := json.MarshalIndent(us, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal users: %w", err)
+	}
+	
+	return os.WriteFile(filePath, data, 0644)
+}
+
+// Dick's best practice: lookup by sub, fallback to email
+func (us *UserStore) lookupUser(sub, email string) (*User, error) {
+	us.mu.Lock()
+	defer us.mu.Unlock()
+	
+	if user, exists := us.Users[sub]; exists {
+		user.LastLogin = time.Now()
+		return user, nil
+	}
+	
+	if email != "" {
+		for _, user := range us.Users {
+			if strings.EqualFold(user.Email, email) {
+				delete(us.Users, user.Sub)
+				user.Sub = sub
+				user.LastLogin = time.Now()
+				us.Users[sub] = user
+				return user, nil
+			}
+		}
+	}
+	
+	return nil, fmt.Errorf("user not found")
+}
 
 type jwksCache struct {
 	keys map[string]*rsa.PublicKey
@@ -201,6 +281,77 @@ func toInt64(v interface{}) int64 {
 	}
 }
 
+// ===== Session Management =====
+func generateSessionSecret() []byte {
+	secret := make([]byte, 32)
+	rand.Read(secret)
+	return secret
+}
+
+func (s *Server) createSessionCookie(session *Session) (*http.Cookie, error) {
+	data, err := json.Marshal(session)
+	if err != nil {
+		return nil, err
+	}
+	
+	h := hmac.New(sha256.New, s.sessionSecret)
+	h.Write(data)
+	signature := h.Sum(nil)
+	
+	cookieValue := base64.URLEncoding.EncodeToString(data) + "." + base64.URLEncoding.EncodeToString(signature)
+	
+	return &http.Cookie{
+		Name:     "session",
+		Value:    cookieValue,
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+		Expires:  session.ExpiresAt,
+	}, nil
+}
+
+func (s *Server) verifySessionCookie(r *http.Request) (*Session, error) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		return nil, fmt.Errorf("no session cookie")
+	}
+	
+	parts := strings.Split(cookie.Value, ".")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid cookie format")
+	}
+	
+	data, err := base64.URLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("invalid cookie data")
+	}
+	
+	signature, err := base64.URLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("invalid cookie signature")
+	}
+	
+	h := hmac.New(sha256.New, s.sessionSecret)
+	h.Write(data)
+	expectedSig := h.Sum(nil)
+	
+	if !hmac.Equal(signature, expectedSig) {
+		return nil, fmt.Errorf("invalid cookie signature")
+	}
+	
+	var session Session
+	if err := json.Unmarshal(data, &session); err != nil {
+		return nil, fmt.Errorf("invalid session data")
+	}
+	
+	if time.Now().After(session.ExpiresAt) {
+		return nil, fmt.Errorf("session expired")
+	}
+	
+	return &session, nil
+}
+
 // ===== Statement Gate (conservative) =====
 var denyPattern = regexp.MustCompile(`(?is)\b(begin|commit|rollback|set|reset|lock|copy|call|do)\b|for\s+update`)
 
@@ -243,66 +394,14 @@ func singleStatementGate(q string) error {
 	return nil
 }
 
-// ===== Identity → role via env allowlists =====
-// Accepts Hello sub and/or email (comma-separated): READERS, WRITERS
-func mapRoleFromAllowlists(claims map[string]interface{}) (string, bool) {
-	// candidate IDs to match against env lists (normalize to lower)
-	candidates := []string{}
-	if sub, _ := claims["sub"].(string); sub != "" {
-		candidates = append(candidates, strings.ToLower(strings.TrimSpace(sub)))
-	}
-	if em, _ := claims["email"].(string); em != "" {
-		candidates = append(candidates, strings.ToLower(strings.TrimSpace(em)))
-	}
-	if len(candidates) == 0 {
+// ===== Simple Session-Based Authentication =====
+func (s *Server) authenticateRequest(w http.ResponseWriter, r *http.Request) (string, bool) {
+	session, err := s.verifySessionCookie(r)
+	if err != nil {
+		sendErrorResponse(w, "Authentication required", http.StatusUnauthorized)
 		return "", false
 	}
-	// build env set once
-	toSet := func(env string) map[string]struct{} {
-		m := map[string]struct{}{}
-		for _, item := range strings.Split(os.Getenv(env), ",") {
-			item = strings.ToLower(strings.TrimSpace(item))
-			if item != "" {
-				m[item] = struct{}{}
-			}
-		}
-		return m
-	}
-	writers := toSet("WRITERS")
-	readers := toSet("READERS")
-	// match any candidate
-	for _, c := range candidates {
-		if _, ok := writers[c]; ok {
-			return roleWriter, true
-		}
-		if _, ok := readers[c]; ok {
-			return roleReader, true
-		}
-	}
-	return "", false
-}
-
-// ===== AuthN/Z entrypoint =====
-func (s *Server) authenticateAndAuthorize(w http.ResponseWriter, r *http.Request) (context.Context, string, bool) {
-	auth := r.Header.Get("Authorization")
-	if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
-		sendErrorResponse(w, "missing bearer token", http.StatusUnauthorized)
-		return r.Context(), "", false
-	}
-	token := strings.TrimSpace(auth[len("Bearer "):])
-	claims, err := s.verifyIDToken(r.Context(), token)
-	if err != nil {
-		sendErrorResponse(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
-		return r.Context(), "", false
-	}
-	role, ok := mapRoleFromAllowlists(claims)
-	if !ok {
-		sendErrorResponse(w, "forbidden: no role", http.StatusForbidden)
-		return r.Context(), "", false
-	}
-	// attach claims if you want to use later
-	ctx := context.WithValue(r.Context(), struct{}{}, claims)
-	return ctx, role, true
+	return session.Role, true
 }
 
 // ===== Data Structures =====
@@ -310,6 +409,10 @@ func (s *Server) authenticateAndAuthorize(w http.ResponseWriter, r *http.Request
 type QueryRequest struct {
 	SQL    string        `json:"sql"`
 	Params []interface{} `json:"params"`
+}
+
+type LoginRequest struct {
+	IDToken string `json:"id_token"`
 }
 
 type APIDescription struct {
@@ -339,17 +442,26 @@ type Server struct {
 	pathRegexps   map[string]*regexp.Regexp
 	showResponses bool
 	dbType        string
+	
+	// Simplified auth config
+	userStore     *UserStore
+	usersFile     string
+	sessionSecret []byte
+	sessionTTL    time.Duration
+	
+	// Minimal OIDC config (only for login)
 	helloIssuer   string
 	helloClientID string
 	jwksURL       string
 	tokenLeeway   time.Duration
 	jwksCache     *jwksCache
+	
 	mu            sync.Mutex
 }
 
 // ===== Server Initialization =====
 
-func NewServer(dbPath string, pgConnStr string, extensionPath string, apiDescPath string, showResponses bool) (*Server, error) {
+func NewServer(dbPath string, pgConnStr string, extensionPath string, apiDescPath string, showResponses bool, usersFile string) (*Server, error) {
 	var db *sql.DB
 	var err error
 	var dbType string
@@ -416,6 +528,12 @@ func NewServer(dbPath string, pgConnStr string, extensionPath string, apiDescPat
 		}
 	}
 
+	// Load users
+	userStore, err := loadUsers(usersFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load users: %w", err)
+	}
+
 	// Initialize the server
 	server := &Server{
 		db:            db,
@@ -423,6 +541,10 @@ func NewServer(dbPath string, pgConnStr string, extensionPath string, apiDescPat
 		showResponses: showResponses,
 		dbType:        dbType,
 		apiDescPath:   apiDescPath,
+		userStore:     userStore,
+		usersFile:     usersFile,
+		sessionSecret: generateSessionSecret(),
+		sessionTTL:    24 * time.Hour,
 		mu:            sync.Mutex{},
 	}
 
@@ -775,12 +897,78 @@ func sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 
 // ===== Request Handlers =====
 
+// Handle login requests
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Login: %s %s", r.Method, r.URL.Path)
+
+	if r.Method != "POST" {
+		sendErrorResponse(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendErrorResponse(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the ID token (heavy lifting - done once)
+	claims, err := s.verifyIDToken(r.Context(), req.IDToken)
+	if err != nil {
+		sendErrorResponse(w, "Invalid ID token: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Extract sub and email
+	sub, _ := claims["sub"].(string)
+	email, _ := claims["email"].(string)
+
+	if sub == "" {
+		sendErrorResponse(w, "ID token missing sub claim", http.StatusBadRequest)
+		return
+	}
+
+	// Look up user (Dick's best practice: sub first, fallback to email)
+	user, err := s.userStore.lookupUser(sub, email)
+	if err != nil {
+		sendErrorResponse(w, "User not authorized", http.StatusForbidden)
+		return
+	}
+
+	// Save updated user store (in case we updated sub)
+	if err := s.userStore.save(s.usersFile); err != nil {
+		log.Printf("Warning: failed to save user store: %v", err)
+	}
+
+	// Create session
+	session := &Session{
+		Sub:       user.Sub,
+		Role:      user.Role,
+		ExpiresAt: time.Now().Add(s.sessionTTL),
+	}
+
+	// Create signed session cookie
+	cookie, err := s.createSessionCookie(session)
+	if err != nil {
+		sendErrorResponse(w, "Failed to create session", http.StatusInternalServerError)
+		return
+	}
+
+	// Set cookie and respond
+	http.SetCookie(w, cookie)
+	s.sendJSONResponse(w, map[string]interface{}{
+		"success": true,
+		"role":    user.Role,
+		"sub":     user.Sub,
+	}, http.StatusOK)
+}
+
 // Handle API requests based on the API description
 func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 	log.Printf("API: %s %s", r.Method, r.URL.Path)
 
-	// NEW: authN/Z
-	ctx, role, ok := s.authenticateAndAuthorize(w, r)
+	// Simple session-based authentication
+	role, ok := s.authenticateRequest(w, r)
 	if !ok {
 		return
 	}
@@ -864,7 +1052,7 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute the query
-	result, err := s.executeQuery(ctx, role, sqlQuery, sqlParams)
+	result, err := s.executeQuery(r.Context(), role, sqlQuery, sqlParams)
 	if err != nil {
 		sendErrorResponse(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 		return
@@ -878,8 +1066,8 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Query: %s", r.URL.Path)
 
-	// NEW: authN/Z
-	ctx, role, ok := s.authenticateAndAuthorize(w, r)
+	// Simple session-based authentication
+	role, ok := s.authenticateRequest(w, r)
 	if !ok {
 		return
 	}
@@ -908,7 +1096,7 @@ func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute the query
-	result, err := s.executeQuery(ctx, role, req.SQL, req.Params)
+	result, err := s.executeQuery(r.Context(), role, req.SQL, req.Params)
 	if err != nil {
 		sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1031,6 +1219,7 @@ func main() {
 	showResponses := flag.Bool("show-responses", false, "Enable logging of SQL query responses")
 	pgConnStr := flag.String("pg-conn", "", "PostgreSQL connection string (if provided, use PostgreSQL instead of SQLite)")
 	pgPort := flag.String("pg-port", "", "PostgreSQL port (optional, overrides port in --pg-conn if provided)")
+	usersFile := flag.String("users-file", "users.json", "Path to users JSON file")
 	helloIssuer := flag.String("hello-issuer", "https://issuer.hello.coop", "Hello OIDC issuer URL")
 	helloClientID := flag.String("hello-client-id", "", "OIDC client_id (audience for ID-token fallback)")
 	jwksURL := flag.String("hello-jwks-url", "", "Override JWKS URL (optional)")
@@ -1056,7 +1245,7 @@ func main() {
 	// Initialize server
 	showResponsesEnabled := *showResponses || shortShowResponses
 	finalPgConnStr := injectPgPort(*pgConnStr, *pgPort)
-	server, err := NewServer(*dbPath, finalPgConnStr, *extension, *apiDesc, showResponsesEnabled)
+	server, err := NewServer(*dbPath, finalPgConnStr, *extension, *apiDesc, showResponsesEnabled, *usersFile)
 	// wire auth config
 	server.helloIssuer = *helloIssuer
 	server.helloClientID = *helloClientID
@@ -1090,6 +1279,9 @@ func main() {
 			next.ServeHTTP(w, r)
 		})
 	}
+
+	// Handle login endpoint
+	mux.HandleFunc("/login", server.handleLogin)
 
 	// Handle API routes first (to match /api/* before static files)
 	if server.apiDesc != nil {
@@ -1132,7 +1324,8 @@ func main() {
 	log.Printf("- API Description: %s", *apiDesc)
 	log.Printf("- Extension: %s", *extension)
 	log.Printf("- Show Responses: %v", showResponsesEnabled)
-	log.Printf("- Auth: issuer=%s client_id=%s (READERS/WRITERS via env)", server.helloIssuer, server.helloClientID)
+	log.Printf("- Users File: %s", *usersFile)
+	log.Printf("- Auth: issuer=%s client_id=%s", server.helloIssuer, server.helloClientID)
 
 	if *pgConnStr != "" {
 		log.Printf("- Database: PostgreSQL")
