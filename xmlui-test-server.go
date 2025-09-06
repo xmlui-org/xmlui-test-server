@@ -59,21 +59,21 @@ type Session struct {
 
 func loadUsers(filePath string) (*UserStore, error) {
 	store := &UserStore{Users: make(map[string]*User)}
-	
+
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		log.Printf("Users file %s doesn't exist, starting with empty user store", filePath)
 		return store, nil
 	}
-	
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read users file: %w", err)
 	}
-	
+
 	if err := json.Unmarshal(data, store); err != nil {
 		return nil, fmt.Errorf("failed to parse users file: %w", err)
 	}
-	
+
 	log.Printf("Loaded %d users from %s", len(store.Users), filePath)
 	return store, nil
 }
@@ -81,37 +81,46 @@ func loadUsers(filePath string) (*UserStore, error) {
 func (us *UserStore) save(filePath string) error {
 	us.mu.RLock()
 	defer us.mu.RUnlock()
-	
+
 	data, err := json.MarshalIndent(us, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal users: %w", err)
 	}
-	
+
 	return os.WriteFile(filePath, data, 0644)
 }
 
-// Dick's best practice: lookup by sub, fallback to email
 func (us *UserStore) lookupUser(sub, email string) (*User, error) {
 	us.mu.Lock()
 	defer us.mu.Unlock()
-	
+
 	if user, exists := us.Users[sub]; exists {
 		user.LastLogin = time.Now()
 		return user, nil
 	}
-	
+
 	if email != "" {
 		for _, user := range us.Users {
 			if strings.EqualFold(user.Email, email) {
+				oldKey := user.Sub // <-- define before delete
 				delete(us.Users, user.Sub)
 				user.Sub = sub
 				user.LastLogin = time.Now()
 				us.Users[sub] = user
+
+				auditLogin(map[string]interface{}{
+					"outcome":           "user_store_update",
+					"user_store_action": "rekeyed_by_email",
+					"email":             email,
+					"old_sub":           oldKey,
+					"new_sub":           sub,
+				})
+
 				return user, nil
 			}
 		}
 	}
-	
+
 	return nil, fmt.Errorf("user not found")
 }
 
@@ -293,13 +302,13 @@ func (s *Server) createSessionCookie(session *Session) (*http.Cookie, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	h := hmac.New(sha256.New, s.sessionSecret)
 	h.Write(data)
 	signature := h.Sum(nil)
-	
+
 	cookieValue := base64.URLEncoding.EncodeToString(data) + "." + base64.URLEncoding.EncodeToString(signature)
-	
+
 	return &http.Cookie{
 		Name:     "session",
 		Value:    cookieValue,
@@ -316,39 +325,39 @@ func (s *Server) verifySessionCookie(r *http.Request) (*Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("no session cookie")
 	}
-	
+
 	parts := strings.Split(cookie.Value, ".")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid cookie format")
 	}
-	
+
 	data, err := base64.URLEncoding.DecodeString(parts[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid cookie data")
 	}
-	
+
 	signature, err := base64.URLEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, fmt.Errorf("invalid cookie signature")
 	}
-	
+
 	h := hmac.New(sha256.New, s.sessionSecret)
 	h.Write(data)
 	expectedSig := h.Sum(nil)
-	
+
 	if !hmac.Equal(signature, expectedSig) {
 		return nil, fmt.Errorf("invalid cookie signature")
 	}
-	
+
 	var session Session
 	if err := json.Unmarshal(data, &session); err != nil {
 		return nil, fmt.Errorf("invalid session data")
 	}
-	
+
 	if time.Now().After(session.ExpiresAt) {
 		return nil, fmt.Errorf("session expired")
 	}
-	
+
 	return &session, nil
 }
 
@@ -442,20 +451,20 @@ type Server struct {
 	pathRegexps   map[string]*regexp.Regexp
 	showResponses bool
 	dbType        string
-	
+
 	// Simplified auth config
 	userStore     *UserStore
 	usersFile     string
 	sessionSecret []byte
 	sessionTTL    time.Duration
-	
+
 	// Minimal OIDC config (only for login)
 	helloIssuer   string
 	helloClientID string
 	jwksURL       string
 	tokenLeeway   time.Duration
 	jwksCache     *jwksCache
-	
+
 	mu            sync.Mutex
 }
 
@@ -902,28 +911,60 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Login: %s %s", r.Method, r.URL.Path)
 
 	if r.Method != "POST" {
+		auditLogin(map[string]interface{}{
+			"outcome": "login_failure", "reason": "method_not_allowed", "method": r.Method,
+			"alg": "", "kid": "",
+		})
 		sendErrorResponse(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		auditLogin(map[string]interface{}{
+			"outcome": "login_failure", "reason": "bad_request", "error": err.Error(),
+			"alg": "", "kid": "",
+		})
 		sendErrorResponse(w, "Invalid request body", http.StatusBadRequest)
 		return
+	}
+
+	// Parse header pre-verify so we can log kid/alg even on failures
+	var hdrAlg, hdrKid string
+	if parts := strings.Split(req.IDToken, "."); len(parts) == 3 {
+		if hb, err := base64.RawURLEncoding.DecodeString(parts[0]); err == nil {
+			var hdr struct{ Alg, Kid, Typ string }
+			if json.Unmarshal(hb, &hdr) == nil {
+				hdrAlg, hdrKid = hdr.Alg, hdr.Kid
+			}
+		}
 	}
 
 	// Verify the ID token (heavy lifting - done once)
 	claims, err := s.verifyIDToken(r.Context(), req.IDToken)
 	if err != nil {
+		auditLogin(map[string]interface{}{
+			"outcome": "login_failure",
+			"reason":  "token_verify_failed",
+			"error":   err.Error(),
+			"alg":     hdrAlg, "kid": hdrKid,
+		})
 		sendErrorResponse(w, "Invalid ID token: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	// Extract sub and email
+	// Extract claims once
 	sub, _ := claims["sub"].(string)
 	email, _ := claims["email"].(string)
+	iss, _ := claims["iss"].(string)
+	var audVal interface{} = claims["aud"] // may be string or []any
 
 	if sub == "" {
+		auditLogin(map[string]interface{}{
+			"outcome": "login_failure",
+			"reason":  "missing_sub",
+			"iss":     iss, "aud": audVal, "email": email, "alg": hdrAlg, "kid": hdrKid,
+		})
 		sendErrorResponse(w, "ID token missing sub claim", http.StatusBadRequest)
 		return
 	}
@@ -931,6 +972,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Look up user (Dick's best practice: sub first, fallback to email)
 	user, err := s.userStore.lookupUser(sub, email)
 	if err != nil {
+		auditLogin(map[string]interface{}{
+			"outcome": "login_failure",
+			"reason":  "user_not_authorized",
+			"sub":     sub, "email": email, "iss": iss, "aud": audVal, "alg": hdrAlg, "kid": hdrKid,
+		})
 		sendErrorResponse(w, "User not authorized", http.StatusForbidden)
 		return
 	}
@@ -938,24 +984,43 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Save updated user store (in case we updated sub)
 	if err := s.userStore.save(s.usersFile); err != nil {
 		log.Printf("Warning: failed to save user store: %v", err)
+		// Optional: audit as non-fatal warning
+		auditLogin(map[string]interface{}{
+			"outcome": "user_store_save_failed",
+			"error":   err.Error(),
+			"sub":     user.Sub, "email": user.Email,
+		})
 	}
 
 	// Create session
 	session := &Session{
 		Sub:       user.Sub,
 		Role:      user.Role,
-		ExpiresAt: time.Now().Add(s.sessionTTL),
+     	ExpiresAt: time.Now().Add(s.sessionTTL), 
 	}
 
 	// Create signed session cookie
 	cookie, err := s.createSessionCookie(session)
 	if err != nil {
+		auditLogin(map[string]interface{}{
+			"outcome": "login_failure",
+			"reason":  "session_create_failed",
+			"sub":     sub, "email": email, "iss": iss, "aud": audVal, "alg": hdrAlg, "kid": hdrKid,
+		})
 		sendErrorResponse(w, "Failed to create session", http.StatusInternalServerError)
 		return
 	}
 
 	// Set cookie and respond
 	http.SetCookie(w, cookie)
+
+	// Success audit
+	auditLogin(map[string]interface{}{
+		"outcome": "login_success",
+		"sub":     user.Sub, "email": user.Email, "role": user.Role,
+		"iss": iss, "aud": audVal, "alg": hdrAlg, "kid": hdrKid,
+	})
+
 	s.sendJSONResponse(w, map[string]interface{}{
 		"success": true,
 		"role":    user.Role,
@@ -1169,6 +1234,22 @@ func launchBrowser(url string) {
 		log.Printf("Failed to launch browser: %v", err)
 	}
 }
+
+func auditLogin(fields map[string]interface{}) {
+	b, _ := json.Marshal(fields)
+
+	// Append to server.log
+	f, err := os.OpenFile("server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		// fallback to standard log if file can't be opened
+		log.Printf("audit_fallback %s", string(b))
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintln(f, string(b))
+}
+
 
 // ===== Main Application =====
 
