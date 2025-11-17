@@ -464,6 +464,9 @@ type Server struct {
 	jwksURL       string
 	tokenLeeway   time.Duration
 	jwksCache     *jwksCache
+	trustedDomain string
+	trustedRole   string
+	trustedSub    string
 
 	mu            sync.Mutex
 }
@@ -904,6 +907,48 @@ func sendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 	http.Error(w, message, statusCode)
 }
 
+func normalizeDomain(domain string) string {
+	d := strings.ToLower(strings.TrimSpace(domain))
+	d = strings.TrimPrefix(d, "@")
+	return d
+}
+
+func (s *Server) tryAuthorizeTrustedDomain(email, iss string) (*User, bool) {
+	if s.trustedDomain == "" {
+		return nil, false
+	}
+	if !strings.EqualFold(iss, s.helloIssuer) {
+		return nil, false
+	}
+	if email == "" {
+		return nil, false
+	}
+	emailLower := strings.ToLower(strings.TrimSpace(email))
+	if !strings.HasSuffix(emailLower, "@"+s.trustedDomain) {
+		return nil, false
+	}
+
+	s.userStore.mu.Lock()
+	defer s.userStore.mu.Unlock()
+
+	if s.userStore.Users == nil {
+		s.userStore.Users = make(map[string]*User)
+	}
+
+	user, exists := s.userStore.Users[s.trustedSub]
+	if !exists {
+		user = &User{
+			Sub:       s.trustedSub,
+			Email:     fmt.Sprintf("trusted@%s", s.trustedDomain),
+			Role:      s.trustedRole,
+			CreatedAt: time.Now(),
+		}
+		s.userStore.Users[s.trustedSub] = user
+	}
+	user.LastLogin = time.Now()
+	return user, true
+}
+
 // ===== Request Handlers =====
 
 // Handle login requests
@@ -971,14 +1016,20 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Look up user (Dick's best practice: sub first, fallback to email)
 	user, err := s.userStore.lookupUser(sub, email)
+	trustedGrant := false
 	if err != nil {
-		auditLogin(map[string]interface{}{
-			"outcome": "login_failure",
-			"reason":  "user_not_authorized",
-			"sub":     sub, "email": email, "iss": iss, "aud": audVal, "alg": hdrAlg, "kid": hdrKid,
-		})
-		sendErrorResponse(w, "User not authorized", http.StatusForbidden)
-		return
+		if fallbackUser, ok := s.tryAuthorizeTrustedDomain(email, iss); ok {
+			user = fallbackUser
+			trustedGrant = true
+		} else {
+			auditLogin(map[string]interface{}{
+				"outcome": "login_failure",
+				"reason":  "user_not_authorized",
+				"sub":     sub, "email": email, "iss": iss, "aud": audVal, "alg": hdrAlg, "kid": hdrKid,
+			})
+			sendErrorResponse(w, "User not authorized", http.StatusForbidden)
+			return
+		}
 	}
 
 	// Save updated user store (in case we updated sub)
@@ -1015,10 +1066,23 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 
 	// Success audit
+	grantedBy := "user_store"
+	if trustedGrant {
+		grantedBy = "trusted_domain"
+	}
+
 	auditLogin(map[string]interface{}{
-		"outcome": "login_success",
-		"sub":     user.Sub, "email": user.Email, "role": user.Role,
-		"iss": iss, "aud": audVal, "alg": hdrAlg, "kid": hdrKid,
+		"outcome":     "login_success",
+		"grant":       grantedBy,
+		"sub":         user.Sub,
+		"email":       user.Email,
+		"presented":   email,
+		"role":        user.Role,
+		"iss":         iss,
+		"aud":         audVal,
+		"alg":         hdrAlg,
+		"kid":         hdrKid,
+		"trusted_dom": s.trustedDomain,
 	})
 
 	s.sendJSONResponse(w, map[string]interface{}{
@@ -1305,6 +1369,8 @@ func main() {
 	helloClientID := flag.String("hello-client-id", "", "OIDC client_id (audience for ID-token fallback)")
 	jwksURL := flag.String("hello-jwks-url", "", "Override JWKS URL (optional)")
 	tokenLeeway := flag.Int("token-leeway-seconds", 60, "Token clock skew leeway in seconds (optional)")
+	trustedDomain := flag.String("hello-trusted-domain", "", "Email domain (e.g. example.com) granted fallback access")
+	trustedRole := flag.String("hello-trusted-role", roleReader, "Role assigned to trusted-domain logins")
 
 	// Short-form alias for show-responses
 	var shortShowResponses bool
@@ -1327,6 +1393,10 @@ func main() {
 	showResponsesEnabled := *showResponses || shortShowResponses
 	finalPgConnStr := injectPgPort(*pgConnStr, *pgPort)
 	server, err := NewServer(*dbPath, finalPgConnStr, *extension, *apiDesc, showResponsesEnabled, *usersFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// wire auth config
 	server.helloIssuer = *helloIssuer
 	server.helloClientID = *helloClientID
@@ -1338,9 +1408,16 @@ func main() {
 	if server.helloClientID == "" {
 		log.Println("WARNING: --hello-client-id not set; token 'aud' will fail verification")
 	}
-
-	if err != nil {
-		log.Fatal(err)
+	domain := normalizeDomain(*trustedDomain)
+	server.trustedDomain = domain
+	if *trustedRole != "" {
+		server.trustedRole = *trustedRole
+	} else {
+		server.trustedRole = roleReader
+	}
+	if domain != "" {
+		server.trustedSub = fmt.Sprintf("sub_trusted_%s", strings.ReplaceAll(domain, ".", "_"))
+		log.Printf("Trusted domain enabled: %s -> subject %s (role=%s)", domain, server.trustedSub, server.trustedRole)
 	}
 
 	// Create router
