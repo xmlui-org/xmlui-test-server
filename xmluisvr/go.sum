@@ -18,10 +18,8 @@ github.com/mikeschinkel/go-dt v0.2.1 h1:MLwyp4vUQN0lfMkLkdRTA4Ty//iiauUKuHAP/00v
 github.com/mikeschinkel/go-dt v0.2.1/go.mod h1:KJYRXePwYdBr57WhtRgDagOb7Ih/ORxE/kG4Mg6c8iE=
 github.com/mikeschinkel/go-dt/appinfo v0.2.1 h1:5BB8HQtGFyZ0qCG2DoBSeDBc9CblEJefUoR/4WxZXiw=
 github.com/mikeschinkel/go-dt/appinfo v0.2.1/go.mod h1:OW7bt0cwIdM8brbREnLByJJlODESIaHsEY+pvXxDEiQ=
-github.com/mikeschinkel/go-dt/de v0.0.0-20251107040413-53a1559d69c5 h1:Goszv/594PaFIUZNvde6x87je6EeORaYOxe58DIklVs=
-github.com/mikeschinkel/go-dt/de v0.0.0-20251107040413-53a1559d69c5/go.mod h1:OxjbH2Ftve5mNnLtrcbzlDgyR5apOGA3KmT0yopjQjo=
-github.com/mikeschinkel/go-dt/dtglob v0.0.0-20251118022100-99eddebdac2c h1:0AgJfaUruUivjRbXEAmWItM0QoKEUvH2yOHlVwEjraQ=
-github.com/mikeschinkel/go-dt/dtglob v0.0.0-20251118022100-99eddebdac2c/go.mod h1:KhrpBlKDrpwgcryKdPzRSI5n1HoLrUbFLYKf5OxM1fI=
+github.com/mikeschinkel/go-dt/dtglob v0.2.1 h1:9jdvU25TIXrVA1uVFaZSyCaaWpEtr8223TIYNx7WEa8=
+github.com/mikeschinkel/go-dt/dtglob v0.2.1/go.mod h1:nmwVPeExeNIFyH/Y3JtLCfP8E68fFbR+Qbi4yrmBFT0=
 github.com/mikeschinkel/go-dt/dtx v0.2.1 h1:OsFs0kHuEZuSJwGyTI+LDZVABf5pAvcPXDuEI08j5PY=
 github.com/mikeschinkel/go-dt/dtx v0.2.1/go.mod h1:mFuyP/9gMzCKaLXhFWOXHngR2ou2jun7yE67NZRBhW8=
 github.com/mikeschinkel/go-fsfix v0.2.0 h1:7ADfjc175/YXdQBegXbn7aV9uOv3umSUFsymRlGBzXQ=

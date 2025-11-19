@@ -10,7 +10,7 @@ require (
 	github.com/mikeschinkel/go-doterr v0.1.0
 	github.com/mikeschinkel/go-dt v0.2.1
 	github.com/mikeschinkel/go-dt/appinfo v0.2.1
-	github.com/mikeschinkel/go-dt/dtglob v0.0.0-20251118022100-99eddebdac2c
+	github.com/mikeschinkel/go-dt/dtglob v0.2.1
 	github.com/mikeschinkel/go-dt/dtx v0.2.1
 	github.com/mikeschinkel/go-fsfix v0.2.0
 	github.com/mikeschinkel/go-jsontest v0.1.1
@@ -24,7 +24,6 @@ require (
 require (
 	github.com/bmatcuk/doublestar/v4 v4.7.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/mikeschinkel/go-dt/de v0.0.0-20251107040413-53a1559d69c5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
