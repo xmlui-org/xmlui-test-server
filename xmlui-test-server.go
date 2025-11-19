@@ -57,6 +57,20 @@ type Session struct {
 	ExpiresAt time.Time `json:"exp"`
 }
 
+type stringSliceFlag []string
+
+func (s *stringSliceFlag) String() string {
+	if s == nil {
+		return ""
+	}
+	return strings.Join(*s, ",")
+}
+
+func (s *stringSliceFlag) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
 func loadUsers(filePath string) (*UserStore, error) {
 	store := &UserStore{Users: make(map[string]*User)}
 
@@ -444,6 +458,11 @@ type MethodDefinition struct {
 	Params      []string `json:"params,omitempty"`
 }
 
+type trustedDomainEntry struct {
+	domain  string
+	subject string
+}
+
 type Server struct {
 	db            *sql.DB
 	apiDesc       *APIDescription
@@ -464,11 +483,10 @@ type Server struct {
 	jwksURL       string
 	tokenLeeway   time.Duration
 	jwksCache     *jwksCache
-	trustedDomain string
-	trustedRole   string
-	trustedSub    string
+	trustedDomains []trustedDomainEntry
+	trustedRole    string
 
-	mu            sync.Mutex
+	mu sync.Mutex
 }
 
 // ===== Server Initialization =====
@@ -913,19 +931,42 @@ func normalizeDomain(domain string) string {
 	return d
 }
 
-func (s *Server) tryAuthorizeTrustedDomain(email, iss string) (*User, bool) {
-	if s.trustedDomain == "" {
-		return nil, false
+func trustedSubjectForDomain(domain string) string {
+	return fmt.Sprintf("sub_trusted_%s", strings.ReplaceAll(domain, ".", "_"))
+}
+
+func (s *Server) configuredTrustedDomains() string {
+	if len(s.trustedDomains) == 0 {
+		return ""
+	}
+	domains := make([]string, 0, len(s.trustedDomains))
+	for _, td := range s.trustedDomains {
+		domains = append(domains, td.domain)
+	}
+	return strings.Join(domains, ",")
+}
+
+func (s *Server) tryAuthorizeTrustedDomain(email, iss string) (*User, string, bool) {
+	if len(s.trustedDomains) == 0 {
+		return nil, "", false
 	}
 	if !strings.EqualFold(iss, s.helloIssuer) {
-		return nil, false
+		return nil, "", false
 	}
 	if email == "" {
-		return nil, false
+		return nil, "", false
 	}
 	emailLower := strings.ToLower(strings.TrimSpace(email))
-	if !strings.HasSuffix(emailLower, "@"+s.trustedDomain) {
-		return nil, false
+
+	var matched *trustedDomainEntry
+	for i := range s.trustedDomains {
+		if strings.HasSuffix(emailLower, "@"+s.trustedDomains[i].domain) {
+			matched = &s.trustedDomains[i]
+			break
+		}
+	}
+	if matched == nil {
+		return nil, "", false
 	}
 
 	s.userStore.mu.Lock()
@@ -935,18 +976,18 @@ func (s *Server) tryAuthorizeTrustedDomain(email, iss string) (*User, bool) {
 		s.userStore.Users = make(map[string]*User)
 	}
 
-	user, exists := s.userStore.Users[s.trustedSub]
+	user, exists := s.userStore.Users[matched.subject]
 	if !exists {
 		user = &User{
-			Sub:       s.trustedSub,
-			Email:     fmt.Sprintf("trusted@%s", s.trustedDomain),
+			Sub:       matched.subject,
+			Email:     fmt.Sprintf("trusted@%s", matched.domain),
 			Role:      s.trustedRole,
 			CreatedAt: time.Now(),
 		}
-		s.userStore.Users[s.trustedSub] = user
+		s.userStore.Users[matched.subject] = user
 	}
 	user.LastLogin = time.Now()
-	return user, true
+	return user, matched.domain, true
 }
 
 // ===== Request Handlers =====
@@ -1017,10 +1058,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Look up user (Dick's best practice: sub first, fallback to email)
 	user, err := s.userStore.lookupUser(sub, email)
 	trustedGrant := false
+	trustedGrantDomain := ""
 	if err != nil {
-		if fallbackUser, ok := s.tryAuthorizeTrustedDomain(email, iss); ok {
+		if fallbackUser, matchedDomain, ok := s.tryAuthorizeTrustedDomain(email, iss); ok {
 			user = fallbackUser
 			trustedGrant = true
+			trustedGrantDomain = matchedDomain
 		} else {
 			auditLogin(map[string]interface{}{
 				"outcome": "login_failure",
@@ -1082,7 +1125,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		"aud":         audVal,
 		"alg":         hdrAlg,
 		"kid":         hdrKid,
-		"trusted_dom": s.trustedDomain,
+		"trusted_dom":       s.configuredTrustedDomains(),
+		"trusted_grant_dom": trustedGrantDomain,
 	})
 
 	s.sendJSONResponse(w, map[string]interface{}{
@@ -1369,7 +1413,8 @@ func main() {
 	helloClientID := flag.String("hello-client-id", "", "OIDC client_id (audience for ID-token fallback)")
 	jwksURL := flag.String("hello-jwks-url", "", "Override JWKS URL (optional)")
 	tokenLeeway := flag.Int("token-leeway-seconds", 60, "Token clock skew leeway in seconds (optional)")
-	trustedDomain := flag.String("hello-trusted-domain", "", "Email domain (e.g. example.com) granted fallback access")
+	var trustedDomainsFlag stringSliceFlag
+	flag.Var(&trustedDomainsFlag, "hello-trusted-domain", "Email domain (e.g. example.com) granted fallback access (repeat flag to allow multiple domains)")
 	trustedRole := flag.String("hello-trusted-role", roleReader, "Role assigned to trusted-domain logins")
 
 	// Short-form alias for show-responses
@@ -1408,16 +1453,32 @@ func main() {
 	if server.helloClientID == "" {
 		log.Println("WARNING: --hello-client-id not set; token 'aud' will fail verification")
 	}
-	domain := normalizeDomain(*trustedDomain)
-	server.trustedDomain = domain
 	if *trustedRole != "" {
 		server.trustedRole = *trustedRole
 	} else {
 		server.trustedRole = roleReader
 	}
-	if domain != "" {
-		server.trustedSub = fmt.Sprintf("sub_trusted_%s", strings.ReplaceAll(domain, ".", "_"))
-		log.Printf("Trusted domain enabled: %s -> subject %s (role=%s)", domain, server.trustedSub, server.trustedRole)
+	if len(trustedDomainsFlag) > 0 {
+		seenDomains := make(map[string]struct{})
+		var entries []trustedDomainEntry
+		for _, rawDomain := range trustedDomainsFlag {
+			domain := normalizeDomain(rawDomain)
+			if domain == "" {
+				continue
+			}
+			if _, exists := seenDomains[domain]; exists {
+				continue
+			}
+			seenDomains[domain] = struct{}{}
+			entries = append(entries, trustedDomainEntry{
+				domain:  domain,
+				subject: trustedSubjectForDomain(domain),
+			})
+		}
+		server.trustedDomains = entries
+		for _, entry := range server.trustedDomains {
+			log.Printf("Trusted domain enabled: %s -> subject %s (role=%s)", entry.domain, entry.subject, server.trustedRole)
+		}
 	}
 
 	// Create router
