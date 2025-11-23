@@ -7,7 +7,7 @@ require github.com/xmlui-org/xmlui-test-server/xmluisvr v0.2.1
 require (
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-sqlite3 v1.14.32 // indirect
-	github.com/mikeschinkel/go-cfgstore v0.1.3 // indirect
+	github.com/mikeschinkel/go-cfgstore v0.2.0 // indirect
 	github.com/mikeschinkel/go-cliutil v0.1.0 // indirect
 	github.com/mikeschinkel/go-doterr v0.1.0 // indirect
 	github.com/mikeschinkel/go-dt v0.2.4 // indirect
