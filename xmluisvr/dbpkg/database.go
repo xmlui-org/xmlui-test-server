@@ -126,11 +126,11 @@ func ParseQueries(queries []string, args ParseQueriesArgs) (mpq *MultipartQuery,
 	db := args.Database
 	var fp dt.Filepath
 	filename := args.BaseFilename + db.QueryFileExt()
-	if args.PrimaryDirType == cfgstore.ProjectConfigDir {
+	if args.PrimaryDirType == cfgstore.ProjectConfigDirType {
 		baseDir, err = args.DirsProvider.ProjectDirFunc()
 		fp = dt.FilepathJoin3(baseDir, ConfigSlug, filename)
 	} else {
-		baseDir, err = args.DirsProvider.CLIConfigDir()
+		baseDir, err = args.DirsProvider.CLIConfigDirType()
 		fp = dt.FilepathJoin4(baseDir, ConfigSlug, db.Type(), filename)
 	}
 	queryBytes, err = fp.ReadFile()

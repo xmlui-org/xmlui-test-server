@@ -1,10 +1,13 @@
 package dbpkg
 
 import (
+	"github.com/mikeschinkel/go-dt"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 
 	. "github.com/mikeschinkel/go-doterr"
 )
+
+var ErrInvalidConnectString = dt.ErrInvalidConnectString
 
 type DatabaseType string
 

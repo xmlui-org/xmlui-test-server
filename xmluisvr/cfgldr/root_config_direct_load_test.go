@@ -49,7 +49,7 @@ func TestDirectJSONLoad(t *testing.T) {
 	// Now test what happens after Normalize
 	opts := cfgldr.NewOptions(cfgldr.OptionsArgs{})
 	err = rc.Normalize(cfgstore.NormalizeArgs{
-		DirType:    cfgstore.CLIConfigDir,
+		DirType:    cfgstore.CLIConfigDirType,
 		SourceFile: "./test-data/project-config.localsvr.json",
 		Options:    opts,
 	})

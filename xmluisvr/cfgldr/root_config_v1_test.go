@@ -88,7 +88,7 @@ func TestLoadRootConfigV1(t *testing.T) {
 				"database.$schema":                          "https://xmlui.org/schemas/v1/localsvr/db/sqlite3-schema.json",
 				"database.version":                          1,
 				"database.type":                             "sqlite3",
-				"database.filepath":                         "./db/data.db",
+				"database.filepath":                         "./data.db",
 				"database.on_open_sql|len()":                1,
 				"database.busy_timeout":                     0,
 				"database.journal_mode":                     "",

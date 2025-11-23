@@ -157,7 +157,7 @@ func (db *BaseDatabase) ValidateFileConnection(ctx Context, dbType DatabaseType,
 end:
 	if err != nil {
 		err = WithErr(err,
-			ErrConnectFailed,
+			dt.ErrConnectFailed,
 		)
 	}
 	return err

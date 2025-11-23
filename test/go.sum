@@ -12,14 +12,15 @@ github.com/mikeschinkel/go-cliutil v0.1.0 h1:r/CM2WpyEFs3sYdoxNovH9ps9lrqtmj7G7l
 github.com/mikeschinkel/go-cliutil v0.1.0/go.mod h1:AszTtzKuZSm4SmlHe/zrhuZvQq0jh2Y7qKtpt8bYGFo=
 github.com/mikeschinkel/go-doterr v0.1.0 h1:ibzRjd1DmlJOWHI+x/pHTLss6SOohgLFShaM26q2UbU=
 github.com/mikeschinkel/go-doterr v0.1.0/go.mod h1:KvybXrdblimuCm7PFXm3OziwCT8bRM8W1OD4kyDi4M0=
-github.com/mikeschinkel/go-dt v0.2.1 h1:MLwyp4vUQN0lfMkLkdRTA4Ty//iiauUKuHAP/00v4zM=
-github.com/mikeschinkel/go-dt v0.2.1/go.mod h1:KJYRXePwYdBr57WhtRgDagOb7Ih/ORxE/kG4Mg6c8iE=
+github.com/mikeschinkel/go-dt v0.2.4 h1:vMf1SAc4DIJY0vu2vPb9iWOczDZqSpIOW5/O00FGOw0=
+github.com/mikeschinkel/go-dt v0.2.4/go.mod h1:KJYRXePwYdBr57WhtRgDagOb7Ih/ORxE/kG4Mg6c8iE=
 github.com/mikeschinkel/go-dt/appinfo v0.2.1 h1:5BB8HQtGFyZ0qCG2DoBSeDBc9CblEJefUoR/4WxZXiw=
 github.com/mikeschinkel/go-dt/appinfo v0.2.1/go.mod h1:OW7bt0cwIdM8brbREnLByJJlODESIaHsEY+pvXxDEiQ=
 github.com/mikeschinkel/go-dt/dtx v0.2.1 h1:OsFs0kHuEZuSJwGyTI+LDZVABf5pAvcPXDuEI08j5PY=
 github.com/mikeschinkel/go-dt/dtx v0.2.1/go.mod h1:mFuyP/9gMzCKaLXhFWOXHngR2ou2jun7yE67NZRBhW8=
 github.com/mikeschinkel/go-fsfix v0.2.0 h1:7ADfjc175/YXdQBegXbn7aV9uOv3umSUFsymRlGBzXQ=
 github.com/mikeschinkel/go-fsfix v0.2.0/go.mod h1:oLpZDdL8ouFX0MTywc/UPpDyLVMq+OPTuZInTGduGt0=
+github.com/mikeschinkel/go-fsfix v0.2.1/go.mod h1:WttCjdD0GIlXObKALv1Lqv9xeavks4qrjfjs3yP8ISU=
 github.com/mikeschinkel/go-jsontest v0.1.1 h1:zxw6kWxYsBnuHqASDdShTY+CLsQV/qrwE56orgBieaI=
 github.com/mikeschinkel/go-jsontest v0.1.1/go.mod h1:X5MDx+7HMdgrd7PPmhJoVxxm68MoLHpyEMo78pu75Ho=
 github.com/mikeschinkel/go-jsonxtractr v0.1.0 h1:Sgb8LCSbHth+Sh2s2xPoFlGAF/CTrvF05Y0hz8ZIoFc=

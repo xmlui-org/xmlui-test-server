@@ -10,7 +10,8 @@ import (
 	"strconv"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
-	cliutil "github.com/mikeschinkel/go-cliutil"
+	"github.com/mikeschinkel/go-cliutil"
+	"github.com/mikeschinkel/go-dt"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
@@ -86,12 +87,12 @@ func (p *Postgres) Open(_ context.Context) (err error) {
 	p.logger.Info("Opening PostgreSQL database")
 	cs, err = p.ParseConnectString(p.ConnectString())
 	if err != nil {
-		err = NewErr(dbpkg.ErrInvalidConnectString, err)
+		err = NewErr(dt.ErrInvalidConnectString, err)
 		goto end
 	}
 	p.DB, err = sql.Open("postgres", string(cs))
 	if err != nil {
-		err = NewErr(dbpkg.ErrConnectFailed, err)
+		err = NewErr(dt.ErrConnectFailed, err)
 		goto end
 	}
 end:

@@ -194,6 +194,7 @@ func (s *SQLite3) String() string {
 func (s *SQLite3) Open(ctx context.Context) (err error) {
 	var cancel context.CancelFunc
 	var timeout time.Duration
+
 	denyUnlessAuthorized = false
 
 	s.V2().InfoPrint("Opening SQLite database", "database_file", s.HomeRelativeFile())
@@ -205,11 +206,21 @@ func (s *SQLite3) Open(ctx context.Context) (err error) {
 		})
 	})
 
-	// Simple connection string with extension loading enabled
-	s.DB, err = sql.Open("sqlite3_ext", s.ConnectString()+"?_allow_load_extension=1")
+	cs := s.ConnectString()
+	err = dt.Filepath(cs).Dir().MkdirAll(0755)
 	if err != nil {
 		err = WithErr(
-			dbpkg.ErrFailedToPingDatabase,
+			dt.ErrFailedToMakeDirectory,
+			err,
+		)
+		goto end
+	}
+
+	// Simple connection string with extension loading enabled
+	s.DB, err = sql.Open("sqlite3_ext", cs+"?_allow_load_extension=1")
+	if err != nil {
+		err = WithErr(
+			dt.ErrFailedToOpenDatabase,
 			err,
 		)
 		goto end
@@ -235,7 +246,7 @@ func (s *SQLite3) Open(ctx context.Context) (err error) {
 	err = s.DB.PingContext(ctx)
 	if err != nil {
 		err = NewErr(
-			dbpkg.ErrFailedToPingDatabase,
+			dt.ErrFailedToPingDatabase,
 			err,
 		)
 		goto end
@@ -245,7 +256,7 @@ func (s *SQLite3) Open(ctx context.Context) (err error) {
 	err = s.execQueriesIfExists("bootstrap", s.BootstrapQueries)
 	if err != nil {
 		err = NewErr(
-			dbpkg.ErrFailedToExecuteQueries,
+			dt.ErrFailedToExecuteQueries,
 			"query_type", "bootstrap",
 			err,
 		)
@@ -255,7 +266,7 @@ func (s *SQLite3) Open(ctx context.Context) (err error) {
 	err = s.execQueriesIfExists("on_open", s.OnOpenQueries)
 	if err != nil {
 		err = NewErr(
-			dbpkg.ErrFailedToExecuteQueries,
+			dt.ErrFailedToExecuteQueries,
 			"query_type", "on_open",
 			err,
 		)
@@ -268,7 +279,7 @@ end:
 	denyUnlessAuthorized = true
 	if err != nil {
 		err = WithErr(err,
-			dbpkg.ErrFailedToOpenDatabase,
+			dt.ErrFailedToOpenDatabase,
 			"db_file", s.HomeRelativeFile(),
 		)
 	}

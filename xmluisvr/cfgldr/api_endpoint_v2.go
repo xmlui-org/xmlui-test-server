@@ -112,16 +112,16 @@ func (ep *APIEndpointV2) normalizeQueryFile(args cfgstore.NormalizeArgs) (err er
 		goto end
 	}
 	switch args.DirType {
-	case cfgstore.CLIConfigDir, cfgstore.AppConfigDir:
+	case cfgstore.CLIConfigDirType, cfgstore.AppConfigDirType:
 		ep.queryFilepath = filepath.Join(ep.configDir, ep.QueryFile)
-	case cfgstore.ProjectConfigDir:
+	case cfgstore.ProjectConfigDirType:
 		var opts *Options
 		opts, err = dtx.AssertType[*Options](args.Options)
 		if err != nil {
 			goto end
 		}
 		ep.queryFilepath = filepath.Join(opts.Webroot, ep.QueryFile)
-	case cfgstore.UnspecifiedConfigDir:
+	case cfgstore.UnspecifiedConfigDirType:
 		// Just here to stop GoLand from complaining about missing case statements
 	}
 	exists, _ = dt.Filepath(ep.queryFilepath).Exists()
