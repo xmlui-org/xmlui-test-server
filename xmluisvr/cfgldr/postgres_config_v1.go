@@ -70,4 +70,9 @@ func (c *PostgresConfigV1) Normalize(cfgstore.NormalizeArgs) (err error) {
 	return err
 }
 
+func (c *PostgresConfigV1) Merge(base DatabaseConfig) DatabaseConfig {
+	// TODO: Implement when Postgres support is added
+	return c
+}
+
 func (*PostgresConfigV1) Config() {}

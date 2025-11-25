@@ -93,6 +93,11 @@ func NewOptions(args OptionsArgs) *Options {
 	if args.APIFile != nil {
 		opts.APIFile = *args.APIFile
 	}
+	if args.Webroot != nil {
+		opts.Webroot = *args.Webroot
+	} else {
+		opts.Webroot = common.DefaultWebroot
+	}
 	if args.ConnectString != nil {
 		opts.ConnectString = *args.ConnectString
 	}

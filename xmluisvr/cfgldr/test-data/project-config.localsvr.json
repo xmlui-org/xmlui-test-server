@@ -11,7 +11,7 @@
 			"version": 2,
 			"name": "User-definable XMLUI Local Server API",
 			"base_path": "/api",
-			"webroot": "./webroot",
+			"webroot": ".",
 			"endpoints": [
 				{
 					"method": "GET",
@@ -79,7 +79,7 @@
 	"database": {
 		"$schema": "https://xmlui.org/schemas/v1/localsvr/db/sqlite3-schema.json",
 		"$schemaVersion": 1,
-		"filepath": "./db/data.db",
+		"filepath": "./data.db",
 		"type": "sqlite3",
 		"extensions": [
 			{

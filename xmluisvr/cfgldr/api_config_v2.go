@@ -67,6 +67,26 @@ func NewAPIConfigV2(webroot string) *APIConfigV2 {
 
 func (*APIConfigV2) Config() {}
 
+func (c *APIConfigV2) Merge(base *APIConfigV2) *APIConfigV2 {
+	// Merge base into c, c takes precedence
+	if c.Name == "" {
+		c.Name = base.Name
+	}
+	if c.BasePath == "" {
+		c.BasePath = base.BasePath
+	}
+	if c.Webroot == "" {
+		c.Webroot = base.Webroot
+	}
+	// Endpoints: If Project has ANY endpoints, use ONLY Project's endpoints
+	// Otherwise use CLI's endpoints
+	if len(c.Endpoints) == 0 && len(base.Endpoints) > 0 {
+		c.Endpoints = base.Endpoints
+	}
+	// Notes: Skip merging (only for text files, per user)
+	return c
+}
+
 func (c *APIConfigV2) normalizeEndpoints(args cfgstore.NormalizeArgs) (err error) {
 	var errs []error
 	if c.Endpoints == nil {

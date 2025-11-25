@@ -117,6 +117,58 @@ func (c *SQLite3ConfigV1) DBExtensions() (exts []DBExtensionConfig) {
 
 func (c *SQLite3ConfigV1) DatabaseConfig() {}
 
+func (c *SQLite3ConfigV1) Merge(base DatabaseConfig) DatabaseConfig {
+	// Merge base into c, c takes precedence
+	baseSQL3, ok := base.(*SQLite3ConfigV1)
+	if !ok {
+		return c // Can't merge different database types
+	}
+
+	// Filepath: Project wins if non-empty
+	if c.Filepath == "" {
+		c.Filepath = baseSQL3.Filepath
+	}
+
+	// OnOpenSQL: Project wins completely
+	if len(c.OnOpenSQL) == 0 && len(baseSQL3.OnOpenSQL) > 0 {
+		c.OnOpenSQL = baseSQL3.OnOpenSQL
+	}
+
+	// bootstrapSQL: Project wins if exists
+	if len(c.bootstrapSQL) == 0 && len(baseSQL3.bootstrapSQL) > 0 {
+		c.bootstrapSQL = baseSQL3.bootstrapSQL
+	}
+
+	// Extensions: Append - accumulate from both
+	if len(baseSQL3.Extensions) > 0 {
+		c.Extensions = append(c.Extensions, baseSQL3.Extensions...)
+	}
+
+	// Scalar fields: Project wins if non-zero/non-empty
+	if c.BusyTimeout == 0 {
+		c.BusyTimeout = baseSQL3.BusyTimeout
+	}
+	if c.JournalMode == "" {
+		c.JournalMode = baseSQL3.JournalMode
+	}
+	if c.Synchronous == "" {
+		c.Synchronous = baseSQL3.Synchronous
+	}
+	if c.ForeignKeys == "" {
+		c.ForeignKeys = baseSQL3.ForeignKeys
+	}
+	if c.AutoCheckpoint == 0 {
+		c.AutoCheckpoint = baseSQL3.AutoCheckpoint
+	}
+	if c.AccessMode == 0 {
+		c.AccessMode = baseSQL3.AccessMode
+	}
+
+	// Notes: Skip (only for text files)
+
+	return c
+}
+
 func (c *SQLite3ConfigV1) DatabaseType() DatabaseType {
 	return SQLite3Database
 }

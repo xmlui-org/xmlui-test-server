@@ -38,7 +38,7 @@ func TestDirectJSONLoad(t *testing.T) {
 	t.Logf("Number of endpoints BEFORE Normalize: %d", len(apiV2.Endpoints))
 
 	require.Equal(t, "User-definable XMLUI Local Server API", apiV2.Name, "API name mismatch")
-	require.Equal(t, "./webroot", apiV2.Webroot, "Webroot mismatch")
+	require.Equal(t, ".", apiV2.Webroot, "Webroot mismatch")
 	require.Len(t, apiV2.Endpoints, 5, "Should have 5 endpoints from JSON")
 
 	// Show what we loaded

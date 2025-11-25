@@ -3,9 +3,11 @@ package cfgldr
 import (
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
+	"os"
 
 	"github.com/mikeschinkel/go-cfgstore"
 	. "github.com/mikeschinkel/go-doterr"
+	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/appinfo"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
@@ -26,14 +28,32 @@ type RootConfigV1 struct {
 }
 
 func (c *RootConfigV1) Merge(rc cfgstore.RootConfig) cfgstore.RootConfig {
-	// TODO: We are currently just taking the latest one but we need to actually
-	//  merge rc into c (and it should probably be immutable)
+	// Merge rc (base config) into c (receiver)
+	// c takes precedence - only fill in empty/nil fields from rc
+	var base *RootConfigV1
 	switch t := rc.(type) {
 	case *RootConfigV1:
-		return t
+		base = t
 	case *RootConfigV1Wrapper:
-		return t
+		base = &t.RootConfigV1
+	default:
+		return c
 	}
+
+	// Merge ServerConfig
+	if c.ServerConfig == nil {
+		c.ServerConfig = base.ServerConfig
+	} else if base.ServerConfig != nil {
+		c.ServerConfig = c.ServerConfig.Merge(base.ServerConfig)
+	}
+
+	// Merge DBConfig
+	if c.DBConfig == nil {
+		c.DBConfig = base.DBConfig
+	} else if base.DBConfig != nil {
+		c.DBConfig = c.DBConfig.Merge(base.DBConfig)
+	}
+
 	return c
 }
 
@@ -200,6 +220,8 @@ func (w *RootConfigV1Wrapper) UnmarshalJSON(b []byte) error {
 func LoadRootConfigV1(args LoadRootConfigV1Args) (_ *RootConfigV1, err error) {
 	var lrc *RootConfigV1Wrapper
 	var rc RootConfigV1
+	var opts *Options
+	var bootstrapBytes []byte
 
 	configStores := args.ConfigStores
 	if configStores == nil {
@@ -229,6 +251,26 @@ func LoadRootConfigV1(args LoadRootConfigV1Args) (_ *RootConfigV1, err error) {
 		panic("LoadRootConfig() returned nil")
 	}
 	rc = lrc.RootConfigV1
+
+	// Load bootstrap SQL file if specified
+	opts, err = dtx.AssertType[*Options](args.Options)
+	if err != nil {
+		goto end
+	}
+	if opts.DBBootstrapFile != "" {
+		bootstrapBytes, err = dt.Filepath(opts.DBBootstrapFile).ReadFile()
+		if err != nil && !os.IsNotExist(err) {
+			err = WithErr(err,
+				ErrFailedToLoadDBSchemaFile,
+				"dbschema_file", opts.DBBootstrapFile,
+			)
+			goto end
+		}
+		if len(bootstrapBytes) != 0 {
+			rc.DBConfig.SetBootstrapQueries([]string{string(bootstrapBytes)})
+		}
+		err = nil
+	}
 end:
 	return &rc, err
 }

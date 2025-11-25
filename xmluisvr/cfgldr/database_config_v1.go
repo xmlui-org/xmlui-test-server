@@ -17,6 +17,7 @@ type DatabaseConfig interface {
 	SourceFile() string
 	DBExtensions() []DBExtensionConfig
 	Normalize(cfgstore.NormalizeArgs) error
+	Merge(DatabaseConfig) DatabaseConfig
 }
 
 type DBExtensionConfig interface {

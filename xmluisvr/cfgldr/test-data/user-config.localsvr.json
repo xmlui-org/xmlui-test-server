@@ -11,7 +11,7 @@
          "version":   2,
          "name":      "User-definable XMLUI Local Server API",
          "base_path": "/api",
-         "webroot":   "./webroot",
+         "webroot":   ".",
          "endpoints": [
             {
                "method":       "GET",
@@ -106,7 +106,7 @@
       "$schema":     "https://xmlui.org/schemas/v1/localsvr/db/sqlite3-schema.json",
       "version":     1,
       "type":        "sqlite3",
-      "filepath":    "./db/data.db",
+      "filepath":    "./data.db",
       "extensions":  null,
       "on_open_sql": [
          "PRAGMA foreign_keys = OFF;"

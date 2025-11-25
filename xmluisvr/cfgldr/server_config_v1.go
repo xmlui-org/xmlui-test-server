@@ -29,6 +29,26 @@ type ServerConfigV1 struct {
 
 func (*ServerConfigV1) ServerConfig() {}
 
+func (c *ServerConfigV1) Merge(base *ServerConfigV1) *ServerConfigV1 {
+	// Merge base into c, c takes precedence
+	if c.Host == "" {
+		c.Host = base.Host
+	}
+	if c.Port == 0 {
+		c.Port = base.Port
+	}
+	if c.APIConfig == nil {
+		c.APIConfig = base.APIConfig
+	} else if base.APIConfig != nil {
+		c.APIConfig = c.APIConfig.Merge(base.APIConfig)
+	}
+	// Notes: append base notes to c's notes (accumulate)
+	if len(base.Notes) > 0 {
+		c.Notes = append(c.Notes, base.Notes...)
+	}
+	return c
+}
+
 func (c *ServerConfigV1) Normalize(args cfgstore.NormalizeArgs) (err error) {
 	c.Schema = ServerConfigV1Schema
 	c.Version = ServerConfigV1Version

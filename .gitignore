@@ -7,5 +7,8 @@
 /xmluisvr/sqlite3
 /xmluisvr/sqlite3/**
 
-/db/data.db
-/db/data.db-*
+/data.db
+/data.db-*
+
+go.work
+go.work.sum
