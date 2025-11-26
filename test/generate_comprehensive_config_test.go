@@ -240,31 +240,31 @@ func generateConfig(outputPath string) error {
 		Description: "Multi-segment date parameter with slash format",
 		Query:       "SELECT id, archive_date, content, format_type FROM archive WHERE archive_date LIKE :archive_date || '%';",
 		Cardinality: string(sqlparams.ManyRows),
-		RowType:     string(dbqvars.ColumnsRowType),
+		RowType:     string(sqlparams.ColumnsRowType),
 		ColumnTypes: []string{"integer", "string", "string", "string"},
 	}))
 
 	api.AddEndpoint(cfgldr.NewAPIEndpointV2("GET", "/archive/by-datetime/{datetime:date:format[yyyy-mm-dd_hh:mm:ss]}", cfgldr.APIEndpointV2Args{
 		Description: "Combined date-time format",
 		Query:       "SELECT id, archive_date, archive_time, content FROM archive WHERE archive_date || '_' || archive_time = :datetime;",
-		Cardinality: string(dbqvars.ManyRows),
-		RowType:     string(dbqvars.ColumnsRowType),
+		Cardinality: string(sqlparams.ManyRows),
+		RowType:     string(sqlparams.ColumnsRowType),
 		ColumnTypes: []string{"integer", "string", "string", "string"},
 	}))
 
 	api.AddEndpoint(cfgldr.NewAPIEndpointV2("GET", "/measurements/by-sensor/{sensor_id:alphanumeric:length[4..10]}", cfgldr.APIEndpointV2Args{
 		Description: "Alphanumeric parameter with length constraint",
 		Query:       "SELECT sensor_id, value, unit, precision_val FROM measurements WHERE sensor_id = :sensor_id;",
-		Cardinality: string(dbqvars.ManyRows),
-		RowType:     string(dbqvars.ColumnsRowType),
+		Cardinality: string(sqlparams.ManyRows),
+		RowType:     string(sqlparams.ColumnsRowType),
 		ColumnTypes: []string{"string", "real", "string", "real"},
 	}))
 
 	api.AddEndpoint(cfgldr.NewAPIEndpointV2("GET", "/measurements/by-value/{value:real:range[0.0..1000.5]}", cfgldr.APIEndpointV2Args{
 		Description: "Real parameter with decimal range constraint",
 		Query:       "SELECT sensor_id, value, unit FROM measurements WHERE value = :value;",
-		Cardinality: string(dbqvars.ManyRows),
-		RowType:     string(dbqvars.ColumnsRowType),
+		Cardinality: string(sqlparams.ManyRows),
+		RowType:     string(sqlparams.ColumnsRowType),
 		ColumnTypes: []string{"string", "real", "string"},
 	}))
 
@@ -274,8 +274,8 @@ func generateConfig(outputPath string) error {
 		Params: m(
 			"@note", "All parameters optional with defaults: name defaults to empty string, status to 'active', min_budget to 0.\nTests optional parameter handling and default value application.",
 		),
-		Cardinality: string(dbqvars.ManyRows),
-		RowType:     string(dbqvars.ColumnsRowType),
+		Cardinality: string(sqlparams.ManyRows),
+		RowType:     string(sqlparams.ColumnsRowType),
 		ColumnTypes: []string{"integer", "string", "string", "real"},
 	}))
 
@@ -286,8 +286,8 @@ func generateConfig(outputPath string) error {
 			param("name", "string", "length[1..100]"),
 			param("email", "string", "regex[[^@]+@[^@]+\\.[^@]+]"),
 		),
-		Cardinality: string(dbqvars.OneRow),
-		RowType:     string(dbqvars.ColumnsRowType),
+		Cardinality: string(sqlparams.OneRow),
+		RowType:     string(sqlparams.ColumnsRowType),
 		ColumnTypes: []string{"integer", "string", "string"},
 	}))
 
@@ -301,8 +301,8 @@ func generateConfig(outputPath string) error {
 			param("task.priority", "int", "range[1..5]"),
 			param("task.estimate", "real", "range[0.0..100.0]"),
 		),
-		Cardinality: string(dbqvars.OneRow),
-		RowType:     string(dbqvars.ColumnsRowType),
+		Cardinality: string(sqlparams.OneRow),
+		RowType:     string(sqlparams.ColumnsRowType),
 		ColumnTypes: []string{"integer"},
 	}))
 
