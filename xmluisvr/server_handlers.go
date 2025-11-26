@@ -15,12 +15,12 @@ import (
 
 	. "github.com/mikeschinkel/go-doterr"
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apipkg"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 )
 
 func (svr *Server) handleRootFunc() http.HandlerFunc {
@@ -223,7 +223,7 @@ end:
 	return body, err
 }
 
-func (svr *Server) getDBQuery(args apipkg.HandlerHelperArgs) (qs dbqvars.QueryString, values []any, err error) {
+func (svr *Server) getDBQuery(args apipkg.HandlerHelperArgs) (qs sqlparams.QueryString, values []any, err error) {
 	// Decode the body into the queryRequest struct
 	var req struct {
 		Query  string `json:"db_query"`

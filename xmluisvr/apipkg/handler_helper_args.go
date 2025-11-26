@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
 
 	. "github.com/mikeschinkel/go-doterr"
@@ -24,15 +24,15 @@ type HandlerHelperArgs struct {
 	Endpoint    *Endpoint
 	QueryValues []any
 	QueryResult apiresp.QueryResult
-	DBQuery     dbqvars.QueryString
+	DBQuery     sqlparams.QueryString
 	RequestBody bytes.Buffer
 	Content     any
 	TargetURL   *url.URL
 	URLPath     common.URLPath
 }
 
-func (args HandlerHelperArgs) GetQueryString() (qs dbqvars.QueryString, err error) {
-	var dbq dbqvars.ParsedQuery
+func (args HandlerHelperArgs) GetQueryString() (qs sqlparams.QueryString, err error) {
+	var dbq sqlparams.ParsedQuery
 	if args.DBQuery != "" {
 		qs = args.DBQuery
 	}
@@ -85,7 +85,7 @@ func (api *API) GetResponseContent(args HandlerHelperArgs) (content any, err err
 	result := args.MatchResult
 	dbResult := args.QueryResult
 
-	content, err = args.QueryResult.GetByCardinality(dbqvars.Cardinality(result.Route.Cardinality))
+	content, err = args.QueryResult.GetByCardinality(sqlparams.Cardinality(result.Route.Cardinality))
 	switch {
 	case errors.Is(err, dbpkg.ErrManyRowsExpectedZeroReturned):
 		fallthrough

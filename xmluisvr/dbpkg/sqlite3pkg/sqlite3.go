@@ -12,10 +12,10 @@ import (
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 
 	. "github.com/mikeschinkel/go-doterr"
 )
@@ -59,9 +59,9 @@ end:
 	return false
 }
 
-func (*SQLite3) ParseQueryString(query string) (_ dbqvars.QueryString, err error) {
+func (*SQLite3) ParseQueryString(query string) (_ sqlparams.QueryString, err error) {
 	// TODO: Add SQL Query validation
-	return dbqvars.QueryString(query), err
+	return sqlparams.QueryString(query), err
 }
 
 type SQLite3Args struct {
@@ -459,9 +459,9 @@ end:
 	return allowed
 }
 
-func (s *SQLite3) ConvertValue(value any, dt dbqvars.DBDataType) any {
+func (s *SQLite3) ConvertValue(value any, dt sqlparams.DBDataType) any {
 	switch dt {
-	case dbqvars.IntegerDBDataType:
+	case sqlparams.IntegerDBDataType:
 		s, ok := value.(string)
 		if !ok {
 			goto end

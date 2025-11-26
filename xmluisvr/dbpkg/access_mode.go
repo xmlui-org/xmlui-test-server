@@ -1,17 +1,17 @@
 package dbpkg
 
 import (
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
+	"github.com/mikeschinkel/go-sqlparams"
 )
 
 // Constants for AccessMode values
 // IMPORTANT: Number values of the AccessModes are critical to the algorithm
 const (
-	UnspecifiedAccessMode = AccessMode(dbqvars.UnspecifiedDBAccessMode)
-	ReadOnlyMode          = AccessMode(dbqvars.DBReadOnlyMode)
-	ReadWriteMode         = AccessMode(dbqvars.DBReadWriteMode)
-	AdminMode             = AccessMode(dbqvars.DBAdminMode)
-	SuperAdminMode        = AccessMode(dbqvars.DBSuperAdminMode)
+	UnspecifiedAccessMode = AccessMode(sqlparams.UnspecifiedDBAccessMode)
+	ReadOnlyMode          = AccessMode(sqlparams.DBReadOnlyMode)
+	ReadWriteMode         = AccessMode(sqlparams.DBReadWriteMode)
+	AdminMode             = AccessMode(sqlparams.DBAdminMode)
+	SuperAdminMode        = AccessMode(sqlparams.DBSuperAdminMode)
 )
 
 type AccessMode int

@@ -5,8 +5,8 @@ import (
 	"unsafe"
 
 	"github.com/mikeschinkel/go-rfc9457"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
 
 	. "github.com/mikeschinkel/go-doterr"
@@ -40,7 +40,7 @@ type PayloadArgs struct {
 	ErrorStyle        common.ErrorStyle
 	Error             error
 	MissingParameters []MissingParameter
-	DBQuery           dbqvars.QueryString
+	DBQuery           sqlparams.QueryString
 	EndpointTemplate  string
 	Detail            string
 	RFC9457           *rfc9457.Response
@@ -153,7 +153,7 @@ func (args *PayloadArgs) GetMissingParameters() []MissingParameter {
 	return args.MissingParameters
 }
 
-func (args *PayloadArgs) GetDBQuery() dbqvars.QueryString {
+func (args *PayloadArgs) GetDBQuery() sqlparams.QueryString {
 	args.useProp(unsafe.Offsetof(args.DBQuery))
 	return args.DBQuery
 }

@@ -11,8 +11,8 @@ import (
 	"github.com/mikeschinkel/go-cfgstore"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 
 	. "github.com/mikeschinkel/go-doterr"
 )
@@ -142,10 +142,10 @@ func (ep *APIEndpointV2) Normalize(args cfgstore.NormalizeArgs) error {
 		ep.Description = ep.Endpoint()
 	}
 	if ep.Cardinality == "" {
-		ep.Cardinality = string(dbqvars.DefaultCardinality)
+		ep.Cardinality = string(sqlparams.DefaultCardinality)
 	}
 	if ep.RowType == "" {
-		ep.RowType = string(dbqvars.DefaultRowType)
+		ep.RowType = string(sqlparams.DefaultRowType)
 	}
 	if ep.Params == nil {
 		ep.Params = APIParamsV1{}

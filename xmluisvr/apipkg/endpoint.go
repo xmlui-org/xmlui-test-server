@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars/pvtypes"
 
 	"github.com/mikeschinkel/go-jsonxtractr"
@@ -48,14 +48,14 @@ func ParseEndpoints(cfgEPs []*cfgldr.APIEndpointV2, basePath common.URLPath, db 
 	return eps, err
 }
 
-func ParseQuery(query common.QueryString, db dbpkg.Database) (pq dbqvars.ParsedQuery, err error) {
+func ParseQuery(query common.QueryString, db dbpkg.Database) (pq sqlparams.ParsedQuery, err error) {
 
 	// QueryFileExt is a proxy for Query Type.
 	// TODO: Maybe add a first-class QueryType later
 	qt := strings.ToLower(db.QueryFileExt())
 	switch qt {
 	case ".sql":
-		pq, err = dbqvars.ParseSQL(dbqvars.SQLQuery(query), db.GetFormatParamFunc())
+		pq, err = sqlparams.ParseSQL(sqlparams.SQLQuery(query), db.GetFormatParamFunc())
 	default:
 		err = NewErr(ErrQueryTypeParsingNotYetSupported, "query_type", qt)
 	}
@@ -98,11 +98,11 @@ func ParseEndpoint(cfg *cfgldr.APIEndpointV2, basePath common.URLPath, db dbpkg.
 	}
 	errs = AppendErr(errs, err)
 	ep.pathParsed = true
-	ep.Cardinality, err = dbqvars.ParseCardinality(cfg.Cardinality)
+	ep.Cardinality, err = sqlparams.ParseCardinality(cfg.Cardinality)
 	errs = AppendErr(errs, err)
-	ep.RowType, err = dbqvars.ParseDBRowType(cfg.RowType)
+	ep.RowType, err = sqlparams.ParseDBRowType(cfg.RowType)
 	errs = AppendErr(errs, err)
-	ep.ColumnTypes, err = dbqvars.ParseColumnTypes(cfg.ColumnTypes)
+	ep.ColumnTypes, err = sqlparams.ParseColumnTypes(cfg.ColumnTypes)
 	errs = AppendErr(errs, err)
 	err = CombineErrs(errs)
 	if err != nil {
@@ -123,15 +123,15 @@ type EndPointString string
 // Endpoint represents a parsed API endpoint configuration with all validation complete.
 // It contains the HTTP method, URL path, SQL query, parameters, and response formatting options.
 type Endpoint struct {
-	Description   string               // Human-readable description of the endpoint
-	ParsedQuery   dbqvars.ParsedQuery  // Query to execute parsed by dbqvars.ParseBytes()
-	queryFilepath dt.Filepath          // Resolved absolute path to SQL file
-	Params        []EndpointParam      // Parameters that can be extracted from requests
-	Cardinality   dbqvars.Cardinality  // Expected number of result rows (one, many, etc.)
-	RowType       dbqvars.DBRowType    // Format for returning results (json, columns, etc.)
-	ColumnTypes   []dbqvars.DBDataType // Expected data types for result columns
-	method        common.HTTPMethod    // HTTP method (GET, POST, etc.)
-	path          pathvars.Template    // URL path pattern with parameter placeholders
+	Description   string                 // Human-readable description of the endpoint
+	ParsedQuery   sqlparams.ParsedQuery  // Query to execute parsed by sqlparams.ParseBytes()
+	queryFilepath dt.Filepath            // Resolved absolute path to SQL file
+	Params        []EndpointParam        // Parameters that can be extracted from requests
+	Cardinality   sqlparams.Cardinality  // Expected number of result rows (one, many, etc.)
+	RowType       sqlparams.DBRowType    // Format for returning results (json, columns, etc.)
+	ColumnTypes   []sqlparams.DBDataType // Expected data types for result columns
+	method        common.HTTPMethod      // HTTP method (GET, POST, etc.)
+	path          pathvars.Template      // URL path pattern with parameter placeholders
 	pathParsed    bool
 }
 
@@ -180,7 +180,7 @@ func (ep *Endpoint) GetParameterValues(args ParameterValuesArgs) (queryValues []
 	var namesNotFound []pathvars.Identifier
 	var jsonValuesMap jsonxtractr.ValuesMap
 	var notFound []jsonxtractr.Selector
-	var selectors []dbqvars.Selector
+	var selectors []sqlparams.Selector
 	var epParams []EndpointParam
 
 	dbq := ep.ParsedQuery
@@ -477,7 +477,7 @@ func (ep *Endpoint) RawMethod() common.HTTPMethod {
 
 // convertValuesForSQL converts parameter values to SQL-compatible types.
 // Currently handles boolean to integer conversion for SQLite compatibility.
-func (ep *Endpoint) convertValuesForSQL(parameters dbqvars.Parameters, values []any, args ParameterValuesArgs) (_ []any) {
+func (ep *Endpoint) convertValuesForSQL(parameters sqlparams.Parameters, values []any, args ParameterValuesArgs) (_ []any) {
 	var converted []any
 
 	// Create a map of parameter names to their types for quick lookup
@@ -508,7 +508,7 @@ func (ep *Endpoint) convertValuesForSQL(parameters dbqvars.Parameters, values []
 func convertValueForSQL(value any, dt pathvars.PVDataType, args ParameterValuesArgs) any {
 	switch dt {
 	case pathvars.BooleanType:
-		value = args.Database.ConvertValue(value, dbqvars.IntegerDBDataType)
+		value = args.Database.ConvertValue(value, sqlparams.IntegerDBDataType)
 	}
 	return value
 }

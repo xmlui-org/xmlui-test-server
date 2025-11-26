@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/mikeschinkel/go-rfc9457"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 
 	. "github.com/mikeschinkel/go-doterr"
 )
@@ -15,26 +15,26 @@ var _ ResponsePayload = (*QueryResult)(nil)
 
 type QueryResult dbpkg.QueryResult
 
-func (qr QueryResult) GetByCardinality(c dbqvars.Cardinality) (content any, err error) {
+func (qr QueryResult) GetByCardinality(c sqlparams.Cardinality) (content any, err error) {
 	switch c {
-	case dbqvars.ManyRowsOrNone:
+	case sqlparams.ManyRowsOrNone:
 		if len(qr) == 0 {
 			goto end
 		}
 
-	case dbqvars.ManyRows:
+	case sqlparams.ManyRows:
 		if len(qr) == 0 {
 			err = dbpkg.ErrManyRowsExpectedZeroReturned
 			goto end
 		}
 
-	case dbqvars.OneRowOrNone:
+	case sqlparams.OneRowOrNone:
 		if len(qr) == 0 {
 			goto end
 		}
 		fallthrough
 
-	case dbqvars.OneRow:
+	case sqlparams.OneRow:
 		if len(qr) == 0 {
 			err = dbpkg.ErrOneRowExpectedZeroReturned
 			goto end

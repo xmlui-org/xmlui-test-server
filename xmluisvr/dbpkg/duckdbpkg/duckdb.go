@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 )
 
 func init() {
@@ -43,9 +43,9 @@ func (d *DuckDB) Open(_ context.Context) error {
 	panic("implement me")
 }
 
-func (*DuckDB) ParseQueryString(query string) (_ dbqvars.QueryString, err error) {
+func (*DuckDB) ParseQueryString(query string) (_ sqlparams.QueryString, err error) {
 	// Add SQL Query validation
-	return dbqvars.QueryString(query), err
+	return sqlparams.QueryString(query), err
 }
 
 func (d *DuckDB) String() string {

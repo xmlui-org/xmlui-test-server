@@ -8,8 +8,8 @@ import (
 	"github.com/mikeschinkel/go-cfgstore"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 
 	. "github.com/mikeschinkel/go-doterr"
 )
@@ -248,10 +248,10 @@ func (c *SQLite3ConfigV1) Normalize(args cfgstore.NormalizeArgs) (err error) {
 	if err != nil {
 		goto end
 	}
-	if opts.DBAccessMode != int(dbqvars.UnspecifiedDBAccessMode) {
+	if opts.DBAccessMode != int(sqlparams.UnspecifiedDBAccessMode) {
 		c.AccessMode = opts.DBAccessMode
 	}
-	if c.AccessMode == int(dbqvars.UnspecifiedDBAccessMode) {
+	if c.AccessMode == int(sqlparams.UnspecifiedDBAccessMode) {
 		c.AccessMode = DefaultDBAccessMode
 	}
 	errs = AppendErr(errs, c.normalizeConnectString(opts))

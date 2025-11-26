@@ -16,6 +16,7 @@ require (
 	github.com/mikeschinkel/go-jsonxtractr v0.1.0 // indirect
 	github.com/mikeschinkel/go-logutil v0.1.1 // indirect
 	github.com/mikeschinkel/go-rfc9457 v0.1.0 // indirect
+	github.com/mikeschinkel/go-sqlparams v0.1.1 // indirect
 )
 
 replace github.com/xmlui-org/xmlui-test-server/xmluisvr => ../../localsvr/xmluisvr

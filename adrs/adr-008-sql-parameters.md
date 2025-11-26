@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted (Amended 2025-11-26: See Amendment section below for syntax change)
 
 ## Context
 
@@ -27,7 +27,7 @@ Challenges with adopting `:name` directly:
 * `:` is common in string literals (e.g. times like `08:30`, JSON keys like `"foo:bar"`).
 * Avoiding false positives would require SQL parsing or complex heuristics.
 
-To minimize complexity while ensuring correctness, a brace-delimited form (`{name}`) was considered and found preferable.
+To minimize complexity while ensuring correctness, a brace-delimited form (`:name`) was considered and found preferable.
 
 Additionally, optional parameters and default values are already handled **upstream** in the URL parameter parser (using syntax like `{name:type:constraints}`, `{name?}`, and `{name?default}`). Duplicating this logic in the SQL layer would add confusion and unnecessary complexity.
 
@@ -37,13 +37,13 @@ Additionally, optional parameters and default values are already handled **upstr
   Use **brace-delimited named placeholders**:
 
   ```
-  {name}
-  {payload.user.id}
-  {items.0.sku}
-  {body.event}
+  :name
+  :payload.user.id
+  :items[0].sku
+  :body.event
   ```
 
-  Placeholders may include **dot-separated names** and **array indices** to traverse JSON request bodies, enabling expressions like `{user.id}` or `{payload.items.0.sku}`.
+  Placeholders may include **dot-separated names** and **array indices** (using bracket notation) to traverse JSON request bodies, enabling expressions like `:user.id` or `:payload.items[0].sku`.
 
 * **Scope of SQL layer**:
 
@@ -70,7 +70,7 @@ Additionally, optional parameters and default values are already handled **upstr
   * SQL Server → `@p1`, `@p2`, …
 
 * **Duplicate placeholders**:
-  The same `{name}` may appear multiple times in SQL. It will be bound once and substituted consistently.
+  The same `:name` may appear multiple times in SQL. It will be bound once and substituted consistently.
 
 * **Invalid placeholders**:
   Placeholders not resolved by upstream parameter handling result in an error at execution time.
@@ -113,7 +113,7 @@ Additionally, optional parameters and default values are already handled **upstr
 
 ## Still To Be Decided
 
-* Define a syntax for **array expansion** in `IN` lists (e.g., `{ids[]}`, `{ids...}` or other?).
+* Define a syntax for **array expansion** in `IN` lists (e.g., `{ids[]}`, `:ids...` or other?).
 * Extend to support more backends as needed.
 
 ## Future Work
@@ -127,7 +127,7 @@ Additionally, optional parameters and default values are already handled **upstr
 **API SQL template:**
 
 ```sql
-SELECT * FROM users WHERE id = {id};
+SELECT * FROM users WHERE id = :id;
 ```
 
 **PostgreSQL (rewritten):**
@@ -162,9 +162,9 @@ Args: `[42]`
 
 ```sql
 SELECT * FROM orders
-WHERE account_id = {accountId}
-  AND created_at >= {since}
-  AND updated_at >= {since};
+WHERE account_id = :accountId
+  AND created_at >= :since
+  AND updated_at >= :since;
 ```
 
 **PostgreSQL:**
@@ -208,7 +208,7 @@ Args: `[acct123, "2024-01-01T00:00:00Z"]`
 
 ```sql
 INSERT INTO events (user_id, payload)
-VALUES ({user.id}, {body.event});
+VALUES (:user.id, :body.event);
 ```
 
 **PostgreSQL:**
@@ -235,3 +235,86 @@ VALUES (@p1, @p2);
 ```
 
 ---
+
+## Amendment (2025-11-26): Migration to Colon-Prefixed Syntax
+
+### Context
+
+After implementation and usage, the brace-delimited syntax `:name` introduced IDE compatibility issues:
+
+* Most SQL IDEs and editors flag `:name` as syntax errors since it's not standard SQL
+* This creates visual noise and reduces developer productivity
+* The `:name` syntax is widely recognized by SQL tooling as a valid parameter placeholder
+
+The original concerns about `:name` (collisions with time literals and casts) were addressable through proper parsing.
+
+### Decision
+
+**Migrated from `:name` to `:name` syntax** (colon-prefixed placeholders).
+
+**Rationale:**
+* Standard SQL tooling recognizes `:name` as parameter syntax
+* IDE syntax highlighting works correctly
+* Better alignment with SQL ecosystem conventions
+* Parser successfully handles edge cases:
+  - PostgreSQL `::` type casts (explicitly detected and skipped)
+  - Time literals in strings (`'12:30:00'` already handled by string skip logic)
+  - Colons in comments and identifiers (already handled by superset scanning)
+
+**Updated canonical syntax:**
+```
+:name
+:payload.user.id
+:items[0].sku
+:body.event
+```
+
+All other design decisions remain unchanged:
+* Dot-separated paths for JSON traversal
+* Duplicate placeholder reuse
+* Backend-agnostic parser with `FormatParamFunc`
+* Superset scanning to avoid false matches
+
+### Implementation
+
+Parser changes:
+* State machine now detects `:` followed by valid identifier characters
+* Explicit handling for PostgreSQL `::` operator (skip both colons)
+* Simpler parsing logic (no closing delimiter needed)
+* Natural word boundaries for parameter extraction
+
+### Updated Examples
+
+**Example 1: Simple equality**
+```sql
+SELECT * FROM users WHERE id = :id;
+```
+
+**Example 2: Multiple parameters with reuse**
+```sql
+SELECT * FROM orders
+WHERE account_id = :accountId
+  AND created_at >= :since
+  AND updated_at >= :since;
+```
+
+**Example 3: Dotted path**
+```sql
+INSERT INTO events (user_id, payload)
+VALUES (:user.id, :body.event);
+```
+
+**Example 4: PostgreSQL type casts (no conflict)**
+```sql
+SELECT name::text, created_at::date
+FROM users
+WHERE id = :userId;
+```
+
+### Migration Impact
+
+* All SQL query templates updated from `:param` to `:param`
+* All configuration files migrated
+* All tests updated and passing
+* Zero breaking changes to parameter resolution logic
+* Improved developer experience with IDE compatibility

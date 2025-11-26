@@ -12,10 +12,10 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 
 	. "github.com/mikeschinkel/go-doterr"
 )
@@ -45,9 +45,9 @@ func (p *Postgres) CreateNewFromConfig(config cfgldr.DatabaseConfig) (dbpkg.Data
 	panic("implement me")
 }
 
-func (*Postgres) ParseQueryString(query string) (_ dbqvars.QueryString, err error) {
+func (*Postgres) ParseQueryString(query string) (_ sqlparams.QueryString, err error) {
 	// Add SQL Query validation
-	return dbqvars.QueryString(query), err
+	return sqlparams.QueryString(query), err
 }
 func (p *Postgres) CreateNew(args dbpkg.DatabaseArgs) (_ dbpkg.Database, err error) {
 	return NewPostgres(args), err

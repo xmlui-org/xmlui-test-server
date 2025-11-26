@@ -32,6 +32,8 @@ github.com/mikeschinkel/go-logutil v0.1.1 h1:cZYRFfgdgS7HFzvHErXmrYy5cRyDscaq/nA
 github.com/mikeschinkel/go-logutil v0.1.1/go.mod h1:FTov/Lq+y1Eu817aEL0VmzL7ZlPUqYnqcmxPVMlrvmE=
 github.com/mikeschinkel/go-rfc9457 v0.1.0 h1:6zdeZOLp0Fnz5E0paekPClGBd7JiV3/C3FwIGjdOj3c=
 github.com/mikeschinkel/go-rfc9457 v0.1.0/go.mod h1:YjUU3d3OVwCejkCB93nEtr0cDwRbkFUhcgbhkEJzZ30=
+github.com/mikeschinkel/go-sqlparams v0.1.1 h1:x0gueEeqIj8qMx4Yval8Nl/izI5xlHaYQ1JdA28K33M=
+github.com/mikeschinkel/go-sqlparams v0.1.1/go.mod h1:jWP5nfpZyloGHHdc/O26RXTMlZeBZizSXa/0tV/T7+s=
 github.com/mikeschinkel/go-testutil v0.1.0 h1:/0busmc4pHKYslmAuXP5DmNn8bnsAPj5CQjvZ2GDmJk=
 github.com/mikeschinkel/go-testutil v0.1.0/go.mod h1:p+6VK/z2QbHZhFtRTyPBuoIks9WlwDuDzbMv/KO1reY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

@@ -17,6 +17,7 @@ require (
 	github.com/mikeschinkel/go-jsonxtractr v0.1.0
 	github.com/mikeschinkel/go-logutil v0.1.1
 	github.com/mikeschinkel/go-rfc9457 v0.1.0
+	github.com/mikeschinkel/go-sqlparams v0.1.1
 	github.com/mikeschinkel/go-testutil v0.1.0
 	github.com/stretchr/testify v1.11.1
 )

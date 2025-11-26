@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/mikeschinkel/go-cliutil"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 	DefaultQuiet                 = false
 	DefaultAllowUntrustedQueries = false
 	DefaultVerbosity             = cliutil.DefaultVerbosity
-	DefaultDBAccessMode          = int(dbqvars.DBReadWriteMode)
+	DefaultDBAccessMode          = int(sqlparams.DBReadWriteMode)
 )
 
 const (

@@ -8,6 +8,7 @@ require (
 	github.com/mikeschinkel/go-dt/appinfo v0.2.1
 	github.com/mikeschinkel/go-fsfix v0.2.1
 	github.com/mikeschinkel/go-rfc9457 v0.1.0
+	github.com/mikeschinkel/go-sqlparams v0.1.1
 	github.com/mikeschinkel/go-testutil v0.1.0
 	github.com/xmlui-org/xmlui-test-server/xmluisvr v0.3.1
 )

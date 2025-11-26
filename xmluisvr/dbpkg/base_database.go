@@ -9,8 +9,8 @@ import (
 	. "github.com/mikeschinkel/go-doterr"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 )
 
 type BaseDatabase struct {
@@ -32,7 +32,7 @@ func (db *BaseDatabase) Options() common.Options {
 	return *db.options
 }
 
-func (db *BaseDatabase) ConvertValue(value any, dt dbqvars.DBDataType) any {
+func (db *BaseDatabase) ConvertValue(value any, dt sqlparams.DBDataType) any {
 	return value
 }
 

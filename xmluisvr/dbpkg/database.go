@@ -11,9 +11,9 @@ import (
 	"github.com/mikeschinkel/go-cfgstore"
 	"github.com/mikeschinkel/go-doterr"
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
 
 	. "github.com/mikeschinkel/go-doterr"
@@ -46,7 +46,7 @@ type Database interface {
 	Query(Context, string, ...any) (*sql.Rows, error)
 	ValidatedConnection(Context, DatabaseType, common.ConnectString) error
 	ParseConnectString(string) (common.ConnectString, error)
-	ParseQueryString(query string) (dbqvars.QueryString, error)
+	ParseQueryString(query string) (sqlparams.QueryString, error)
 	QueryFileExt() string
 	ParseExtension(DBExtensionConfig) (DBExtension, error)
 	CreateNew(DatabaseArgs) (Database, error)
@@ -54,7 +54,7 @@ type Database interface {
 	LoadExtension(DBExtension) error
 	GetFormatParamFunc() FormatParamFunc
 	Options() common.Options
-	ConvertValue(value any, dt dbqvars.DBDataType) any
+	ConvertValue(value any, dt sqlparams.DBDataType) any
 	fmt.Stringer
 }
 

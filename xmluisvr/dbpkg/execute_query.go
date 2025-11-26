@@ -6,13 +6,13 @@ import (
 	"sync"
 
 	"github.com/mikeschinkel/go-cliutil"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbqvars"
+	"github.com/mikeschinkel/go-sqlparams"
 )
 
 var mutex sync.Mutex
 
 // ExecuteQuery and return results as a map of any
-func ExecuteQuery(ctx Context, db Database, query dbqvars.QueryString, params []any) (result QueryResult, err error) {
+func ExecuteQuery(ctx Context, db Database, query sqlparams.QueryString, params []any) (result QueryResult, err error) {
 	var rows *sql.Rows
 	var columns []string
 

@@ -135,7 +135,7 @@ func (api *API) getQueryValues(args HandlerHelperArgs) (queryValues []any, err e
 		// 	Endpoint    *Endpoint
 		// 	QueryValues []any
 		// 	QueryResult apiresp.QueryResult
-		// 	DBQuery     dbqvars.QueryString
+		// 	DBQuery     sqlparams.QueryString
 		// 	RequestBody bytes.Buffer
 		// 	Content     any
 		// 	TargetURL   *url.URL

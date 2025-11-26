@@ -365,14 +365,14 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 //	api.AddEndpoint(NewAPIEndpointV2("GET", "/tasks/search/{project_id:int}", APIEndpointV2Args{
 //		Description: "Search tasks within a given project (path param project_id + query-string param q)",
 //		Query:       TasksSearchByProjectSQL,
-//		Cardinality: string(dbqvars.ManyRows),
-//		RowType:     string(dbqvars.ColumnsRowType),
+//		Cardinality: string(sqlparams.ManyRows),
+//		RowType:     string(sqlparams.ColumnsRowType),
 //		ColumnTypes: []string{
-//			string(dbqvars.IntegerDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.IntegerDBDataType),
-//			string(dbqvars.StringDBDataType),
+//			string(sqlparams.IntegerDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.IntegerDBDataType),
+//			string(sqlparams.StringDBDataType),
 //		},
 //		Params: m,
 //	}))
@@ -383,17 +383,17 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 //	api.AddEndpoint(NewAPIEndpointV2("GET", "/tasks/by-project/{project:string}", APIEndpointV2Args{
 //		Description: "Tasks for a project using project in the path and owner email as a query-string parameter",
 //		Query:       TasksByProjectSQL,
-//		Cardinality: string(dbqvars.ManyRows),
-//		RowType:     string(dbqvars.ColumnsRowType),
+//		Cardinality: string(sqlparams.ManyRows),
+//		RowType:     string(sqlparams.ColumnsRowType),
 //		ColumnTypes: []string{
-//			string(dbqvars.IntegerDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.IntegerDBDataType),
-//			string(dbqvars.StringDBDataTypeOrNULL),
-//			string(dbqvars.StringDBDataTypeOrNULL),
-//			string(dbqvars.StringDBDataTypeOrNULL),
-//			string(dbqvars.StringDBDataType),
+//			string(sqlparams.IntegerDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.IntegerDBDataType),
+//			string(sqlparams.StringDBDataTypeOrNULL),
+//			string(sqlparams.StringDBDataTypeOrNULL),
+//			string(sqlparams.StringDBDataTypeOrNULL),
+//			string(sqlparams.StringDBDataType),
 //		},
 //		Params: APIParamsV1{
 //			{NameSpec: "email", Type: "string"},
@@ -405,13 +405,13 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 //	api.AddEndpoint(NewAPIEndpointV2("GET", "/users/{id:int}", APIEndpointV2Args{
 //		Description: "Get a single user by numeric id (path parameter only)",
 //		Query:       UserByIdSQL,
-//		Cardinality: string(dbqvars.OneRow),
-//		RowType:     string(dbqvars.ColumnsRowType),
+//		Cardinality: string(sqlparams.OneRow),
+//		RowType:     string(sqlparams.ColumnsRowType),
 //		ColumnTypes: []string{
-//			string(dbqvars.IntegerDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.StringDBDataType),
+//			string(sqlparams.IntegerDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.StringDBDataType),
 //		},
 //	}))
 //
@@ -419,8 +419,8 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 //	api.AddEndpoint(NewAPIEndpointV2("GET", "/hello", APIEndpointV2Args{
 //		Description: "Hello World Endpoint",
 //		Query:       "SELECT 'Hello World';",
-//		Cardinality: string(dbqvars.OneRow),
-//		RowType:     string(dbqvars.StringRowType),
+//		Cardinality: string(sqlparams.OneRow),
+//		RowType:     string(sqlparams.StringRowType),
 //		Params:      APIParamsV1{},
 //	}))
 //
@@ -429,13 +429,13 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 //	api.AddEndpoint(NewAPIEndpointV2("GET", "/projects/by-owner/{email:string}", APIEndpointV2Args{
 //		Description: "Projects owned by a given user (owner email as a path parameter)",
 //		Query:       ProjectsByOwnersEmailSQL,
-//		Cardinality: string(dbqvars.ManyRows),
-//		RowType:     string(dbqvars.ColumnsRowType),
+//		Cardinality: string(sqlparams.ManyRows),
+//		RowType:     string(sqlparams.ColumnsRowType),
 //		ColumnTypes: []string{
-//			string(dbqvars.IntegerDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.StringDBDataType),
-//			string(dbqvars.StringDBDataType),
+//			string(sqlparams.IntegerDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.StringDBDataType),
+//			string(sqlparams.StringDBDataType),
 //		},
 //	}))
 //
