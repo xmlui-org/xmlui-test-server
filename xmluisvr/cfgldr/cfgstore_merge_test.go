@@ -31,7 +31,7 @@ func TestCfgStoreMerge(t *testing.T) {
 		cliAPI := cliConfig.APIConfig()
 		require.NotNil(t, cliAPI, "CLI API config should not be nil")
 		cliAPIV2 := cliAPI.(*cfgldr.APIConfigV2)
-		t.Logf("CLI config has %d endpoints", len(cliAPIV2.Endpoints))
+		// t.Logf("CLI config has %d endpoints", len(cliAPIV2.Endpoints))
 		require.Len(t, cliAPIV2.Endpoints, 5, "CLI config should have 5 endpoints")
 
 		// Load from Project store
@@ -45,7 +45,7 @@ func TestCfgStoreMerge(t *testing.T) {
 		projectAPI := projectConfig.APIConfig()
 		require.NotNil(t, projectAPI, "Project API config should not be nil")
 		projectAPIV2 := projectAPI.(*cfgldr.APIConfigV2)
-		t.Logf("Project config has %d endpoints", len(projectAPIV2.Endpoints))
+		// t.Logf("Project config has %d endpoints", len(projectAPIV2.Endpoints))
 		require.Len(t, projectAPIV2.Endpoints, 5, "Project config should have 5 endpoints")
 	})
 
@@ -63,9 +63,9 @@ func TestCfgStoreMerge(t *testing.T) {
 		require.NotNil(t, api, "Merged API config should not be nil")
 
 		apiV2 := api.(*cfgldr.APIConfigV2)
-		t.Logf("Merged config has %d endpoints", len(apiV2.Endpoints))
-		t.Logf("Merged API Name: %s", apiV2.Name)
-		t.Logf("Merged Webroot: %s", apiV2.Webroot)
+		// t.Logf("Merged config has %d endpoints", len(apiV2.Endpoints))
+		// t.Logf("Merged API Name: %s", apiV2.Name)
+		// t.Logf("Merged Webroot: %s", apiV2.Webroot)
 
 		// CRITICAL: This is the bug - merged config has 0 endpoints!
 		// Both individual configs have 5 endpoints each, but the merge loses them

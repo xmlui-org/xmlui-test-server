@@ -26,6 +26,6 @@ func TestWrapperUnmarshalJSON(t *testing.T) {
 	apiV2, ok := api.(*cfgldr.APIConfigV2)
 	require.True(t, ok, "API config should be v2")
 
-	t.Logf("Wrapper loaded %d endpoints", len(apiV2.Endpoints))
+	// t.Logf("Wrapper loaded %d endpoints", len(apiV2.Endpoints))
 	require.Len(t, apiV2.Endpoints, 5, "Wrapper should have 5 endpoints")
 }

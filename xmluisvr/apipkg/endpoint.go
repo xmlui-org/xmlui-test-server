@@ -8,17 +8,17 @@ import (
 	"strings"
 
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-pathvars/pvtypes"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars/pvtypes"
 
 	"github.com/mikeschinkel/go-jsonxtractr"
 	"github.com/mikeschinkel/go-rfc9457"
 
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
+	"github.com/mikeschinkel/go-pathvars"
 
 	. "github.com/mikeschinkel/go-doterr"
 )

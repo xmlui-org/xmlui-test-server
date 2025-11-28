@@ -434,15 +434,15 @@ func TestAPIEndpoints_FullIntegration(t *testing.T) {
 
 			go func() {
 				defer wg.Done()
-				//t.Logf("Starting xmluisvr.Run() in goroutine...")
+				//// t.Logf("Starting xmluisvr.Run() in goroutine...")
 				// THIS IS THE ACTUAL xmluisvr.Run() CALL!
 				serverError = xmluisvr.Run(serverCtx, runArgs)
 				common.Noop()
-				//t.Logf("xmluisvr.Run() finished with error: %v", serverError)
+				//// t.Logf("xmluisvr.Run() finished with error: %v", serverError)
 			}()
 
 			// Wait for server to start up
-			//t.Logf("Waiting for server to start...")
+			//// t.Logf("Waiting for server to start...")
 			time.Sleep(2 * time.Second) // Give it more time to start
 
 			// Test the actual HTTP endpoints
@@ -452,12 +452,12 @@ func TestAPIEndpoints_FullIntegration(t *testing.T) {
 				t.Run(req.name, func(t *testing.T) {
 					onErr := func() {
 						logEntries, _ := env.bufferedLogHandler.GetLogEntries()
-						t.Logf("%v", logEntries)
-						t.Log(env.bufferedWriter.GetAllOutput())
+						// t.Logf("%v", logEntries)
+						// t.Log(env.bufferedWriter.GetAllOutput())
 					}
 					// Create HTTP request URL
 					url := baseURL + req.path
-					//t.Logf("Making %s request to: %s", req.method, url)
+					//// t.Logf("Making %s request to: %s", req.method, url)
 
 					// Create HTTP request
 					var reqBody io.Reader
@@ -496,11 +496,11 @@ func TestAPIEndpoints_FullIntegration(t *testing.T) {
 						// Output buffered logs for debugging
 						logEntries, err := env.bufferedLogHandler.GetLogEntries()
 						if err != nil {
-							t.Logf("Error getting log entries: %v", err)
+							// t.Logf("Error getting log entries: %v", err)
 						} else if len(logEntries) > 0 {
-							t.Logf("Buffered log entries (%d total):", len(logEntries))
+							// t.Logf("Buffered log entries (%d total):", len(logEntries))
 							for i, entry := range logEntries {
-								t.Logf("  [%d] %v", i+1, entry)
+								// t.Logf("  [%d] %v", i+1, entry)
 							}
 						}
 						t.Errorf("Expected status %d, got %d. Response: %s",
@@ -617,7 +617,7 @@ func TestAPIEndpoints_FullIntegration(t *testing.T) {
 						}
 					}
 
-					//t.Logf("✓ HTTP %s %s returned %d as expected", req.method, req.path, resp.StatusCode)
+					//// t.Logf("✓ HTTP %s %s returned %d as expected", req.method, req.path, resp.StatusCode)
 				})
 			}
 
@@ -636,7 +636,7 @@ func TestAPIEndpoints_FullIntegration(t *testing.T) {
 				// Server shut down gracefully
 			case <-time.After(5 * time.Second):
 				// Server didn't shut down in time
-				//t.Logf("Server did not shut down gracefully within 5 seconds")
+				//// t.Logf("Server did not shut down gracefully within 5 seconds")
 			}
 
 			// Check if server had any errors (ignore context cancellation)
@@ -644,7 +644,7 @@ func TestAPIEndpoints_FullIntegration(t *testing.T) {
 				t.Errorf("Server error: %v", serverError)
 			}
 
-			//t.Logf("✓ Successfully tested xmluisvr.Run() with %d HTTP requests for test case: %s", len(tc.testRequests), tc.name)
+			//// t.Logf("✓ Successfully tested xmluisvr.Run() with %d HTTP requests for test case: %s", len(tc.testRequests), tc.name)
 		})
 	}
 }

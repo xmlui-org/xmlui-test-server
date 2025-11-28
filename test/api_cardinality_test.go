@@ -119,13 +119,13 @@ func TestAPICardinality(t *testing.T) {
 			if bodyStr != "null" && bodyStr != "{}" && bodyStr != "" {
 				var result map[string]interface{}
 				if err := json.Unmarshal(body, &result); err != nil {
-					t.Logf("Response for non-existent record: %s", bodyStr)
+					// t.Logf("Response for non-existent record: %s", bodyStr)
 				}
 			}
 		} else if resp.StatusCode == 404 {
-			t.Logf("Server returns 404 for non-existent records with cardinality='one'")
+			// t.Logf("Server returns 404 for non-existent records with cardinality='one'")
 		} else {
-			t.Logf("Unexpected status code %d for non-existent record", resp.StatusCode)
+			// t.Logf("Unexpected status code %d for non-existent record", resp.StatusCode)
 		}
 	})
 
@@ -149,7 +149,7 @@ func TestAPICardinality(t *testing.T) {
 
 		// For queries with no results, cardinality="many" should return empty array
 		if len(result) != 0 {
-			t.Logf("Note: cardinality='many' returned %d results. Body: %s", len(result), string(body))
+			// t.Logf("Note: cardinality='many' returned %d results. Body: %s", len(result), string(body))
 		}
 	})
 
@@ -211,7 +211,7 @@ func TestAPICardinalityWithDifferentDataTypes(t *testing.T) {
 				}
 			}
 			if !hasInt || !hasString {
-				t.Logf("Response contains: %v", first)
+				// t.Logf("Response contains: %v", first)
 			}
 		}
 	})

@@ -2,6 +2,7 @@ package test
 
 import (
 	jsonv2 "encoding/json/v2"
+	"errors"
 	"strings"
 	"testing"
 
@@ -293,10 +294,10 @@ func TestEndpointParams_RoundTripMarshalUnmarshal(t *testing.T) {
 
 func TestEndpointParams_ErrorPropagation(t *testing.T) {
 	tests := []struct {
-		name      string
-		json      string
-		wantErr   bool
-		errSubstr string
+		name       string
+		json       string
+		wantErr    error
+		wantAnyErr bool // true if we just want any error, not a specific sentinel
 	}{
 		{
 			name: "invalid_param_map_nested_object",
@@ -306,8 +307,7 @@ func TestEndpointParams_ErrorPropagation(t *testing.T) {
 					"bad_param": {"nested": "object"}
 				}
 			}`,
-			wantErr:   true,
-			errSubstr: "cannot unmarshal JSON object into Go cfgldr.APIParamsMap",
+			wantErr: cfgldr.ErrAPIParamsMapCannotBeNested,
 		},
 		{
 			name: "invalid_param_map_array_for_param",
@@ -317,8 +317,7 @@ func TestEndpointParams_ErrorPropagation(t *testing.T) {
 					"bad_param": ["not", "allowed"]
 				}
 			}`,
-			wantErr:   true,
-			errSubstr: "cannot unmarshal JSON object into Go cfgldr.APIParamsMap",
+			wantErr: cfgldr.ErrAPIParamsMapCannotContainArray,
 		},
 		{
 			name: "invalid_param_type_in_conversion",
@@ -328,7 +327,7 @@ func TestEndpointParams_ErrorPropagation(t *testing.T) {
 					"bad_param": "invalid_type:constraint"
 				}
 			}`,
-			wantErr: true,
+			wantAnyErr: true, // Error comes from go-pathvars, not cfgldr
 		},
 	}
 
@@ -337,12 +336,16 @@ func TestEndpointParams_ErrorPropagation(t *testing.T) {
 			var endpoint cfgldr.APIEndpointV2
 			err := jsonv2.Unmarshal([]byte(tt.json), &endpoint)
 
-			if tt.wantErr {
+			if tt.wantErr != nil {
 				if err == nil {
 					t.Fatal("Expected error but got none")
 				}
-				if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
-					t.Errorf("Expected error to contain %q, got: %v", tt.errSubstr, err)
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("Expected error %v, got: %v", tt.wantErr, err)
+				}
+			} else if tt.wantAnyErr {
+				if err == nil {
+					t.Fatal("Expected error but got none")
 				}
 			} else {
 				if err != nil {

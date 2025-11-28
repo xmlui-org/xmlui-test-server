@@ -1,7 +1,6 @@
 package cfgldr_test
 
 import (
-	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"os"
 	"testing"
@@ -33,18 +32,18 @@ func TestDirectJSONLoad(t *testing.T) {
 	require.True(t, ok, "API config should be v2")
 
 	// CRITICAL: Check that endpoints were loaded from JSON
-	t.Logf("API Name: %s", apiV2.Name)
-	t.Logf("Webroot: %s", apiV2.Webroot)
-	t.Logf("Number of endpoints BEFORE Normalize: %d", len(apiV2.Endpoints))
+	// t.Logf("API Name: %s", apiV2.Name)
+	// t.Logf("Webroot: %s", apiV2.Webroot)
+	// t.Logf("Number of endpoints BEFORE Normalize: %d", len(apiV2.Endpoints))
 
 	require.Equal(t, "User-definable XMLUI Local Server API", apiV2.Name, "API name mismatch")
 	require.Equal(t, ".", apiV2.Webroot, "Webroot mismatch")
 	require.Len(t, apiV2.Endpoints, 5, "Should have 5 endpoints from JSON")
 
 	// Show what we loaded
-	for i, ep := range apiV2.Endpoints {
-		t.Logf("Endpoint %d: %s %s", i, ep.Method, ep.Path)
-	}
+	//for i, ep := range apiV2.Endpoints {
+	//	t.Logf("Endpoint %d: %s %s", i, ep.Method, ep.Path)
+	//}
 
 	// Now test what happens after Normalize
 	opts := cfgldr.NewOptions(cfgldr.OptionsArgs{})
@@ -62,14 +61,14 @@ func TestDirectJSONLoad(t *testing.T) {
 	apiV2After, ok := apiAfter.(*cfgldr.APIConfigV2)
 	require.True(t, ok, "API config should still be v2 after Normalize")
 
-	t.Logf("API Name AFTER Normalize: %s", apiV2After.Name)
-	t.Logf("Webroot AFTER Normalize: %s", apiV2After.Webroot)
-	t.Logf("Number of endpoints AFTER Normalize: %d", len(apiV2After.Endpoints))
+	// t.Logf("API Name AFTER Normalize: %s", apiV2After.Name)
+	// t.Logf("Webroot AFTER Normalize: %s", apiV2After.Webroot)
+	// t.Logf("Number of endpoints AFTER Normalize: %d", len(apiV2After.Endpoints))
 
 	// CRITICAL: Endpoints should NOT disappear after Normalize!
 	require.Len(t, apiV2After.Endpoints, 5, "Should STILL have 5 endpoints after Normalize")
 
 	// Show the full config as JSON for debugging
-	bytes, _ := jsonv2.Marshal(&rc, jsontext.WithIndent("  "))
-	t.Logf("Full config after Normalize:\n%s", string(bytes))
+	//bytes, _ := jsonv2.Marshal(&rc, jsontext.WithIndent("  "))
+	// t.Logf("Full config after Normalize:\n%s", string(bytes))
 }

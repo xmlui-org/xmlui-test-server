@@ -39,7 +39,7 @@ func TestAPIHTTPErrors(t *testing.T) {
 		// Verify the response is a valid RFC 9457 error
 		var errorResp rfc9457.Response
 		if err := json.Unmarshal(body, &errorResp); err != nil {
-			t.Logf("Response is not RFC 9457 JSON (may be plain text 404): %v. Body: %s", err, string(body))
+			// t.Logf("Response is not RFC 9457 JSON (may be plain text 404): %v. Body: %s", err, string(body))
 			// Some servers return plain text 404, which is acceptable
 			return
 		}
@@ -99,7 +99,7 @@ func TestAPIHTTPErrors(t *testing.T) {
 		// Verify the response is a valid RFC 9457 error
 		var errorResp rfc9457.Response
 		if err := json.Unmarshal(body, &errorResp); err != nil {
-			t.Logf("Response is not RFC 9457 JSON: %v. Body: %s", err, string(body))
+			// t.Logf("Response is not RFC 9457 JSON: %v. Body: %s", err, string(body))
 			// Some servers may return plain text 405
 			return
 		}
@@ -115,7 +115,7 @@ func TestAPIHTTPErrors(t *testing.T) {
 		// Check for "Allow" header indicating which methods are allowed
 		allowHeader := resp.Header.Get("Allow")
 		if allowHeader != "" {
-			t.Logf("Allow header: %s", allowHeader)
+			// t.Logf("Allow header: %s", allowHeader)
 			if !strings.Contains(allowHeader, "GET") {
 				t.Errorf("Expected Allow header to include GET, got: %s", allowHeader)
 			}
@@ -164,7 +164,8 @@ func TestAPIHTTPErrorsEdgeCases(t *testing.T) {
 
 	t.Run("options_method_handling", func(t *testing.T) {
 		// Test OPTIONS method (used for CORS preflight)
-		resp, body, err := makeHTTPRequest(server.BaseURL, "OPTIONS", "/api/users/1", "")
+		//resp, body, err := makeHTTPRequest(server.BaseURL, "OPTIONS", "/api/users/1", "")
+		resp, _, err := makeHTTPRequest(server.BaseURL, "OPTIONS", "/api/users/1", "")
 		if err != nil {
 			t.Fatalf("HTTP request failed: %v", err)
 		}
@@ -175,14 +176,14 @@ func TestAPIHTTPErrorsEdgeCases(t *testing.T) {
 		// - Return 204 No Content
 		// - Return 405 if not supported
 		if resp.StatusCode != 200 && resp.StatusCode != 204 && resp.StatusCode != 405 {
-			t.Logf("OPTIONS returned status %d. Body: %s", resp.StatusCode, string(body))
+			// t.Logf("OPTIONS returned status %d. Body: %s", resp.StatusCode, string(body))
 		}
 
 		// Check for CORS headers if OPTIONS is supported
 		if resp.StatusCode == 200 || resp.StatusCode == 204 {
 			allowOrigin := resp.Header.Get("Access-Control-Allow-Origin")
 			if allowOrigin != "" {
-				t.Logf("CORS enabled: Access-Control-Allow-Origin: %s", allowOrigin)
+				// t.Logf("CORS enabled: Access-Control-Allow-Origin: %s", allowOrigin)
 			}
 		}
 	})
@@ -202,11 +203,11 @@ func TestAPIHTTPErrorsEdgeCases(t *testing.T) {
 			if len(body) > 0 {
 				t.Errorf("HEAD request should have empty body, got: %s", string(body))
 			}
-			t.Log("HEAD method is supported")
+			// t.Log("HEAD method is supported")
 		} else if resp.StatusCode == 405 {
-			t.Log("HEAD method not supported (returns 405)")
+			// t.Log("HEAD method not supported (returns 405)")
 		} else {
-			t.Logf("HEAD returned unexpected status %d", resp.StatusCode)
+			// t.Logf("HEAD returned unexpected status %d", resp.StatusCode)
 		}
 	})
 
@@ -251,17 +252,18 @@ func TestAPIHTTPErrorsEdgeCases(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.description, func(t *testing.T) {
-				resp, body, err := makeHTTPRequest(server.BaseURL, "GET", tc.path, "")
+				//resp, body, err := makeHTTPRequest(server.BaseURL, "GET", tc.path, "")
+				resp, _, err := makeHTTPRequest(server.BaseURL, "GET", tc.path, "")
 				if err != nil {
 					t.Fatalf("HTTP request failed: %v", err)
 				}
 				defer closeOrError(t, resp.Body)
 
 				// Document the behavior - both should ideally return same result
-				t.Logf("Path %s returned status %d", tc.path, resp.StatusCode)
+				// t.Logf("Path %s returned status %d", tc.path, resp.StatusCode)
 
 				if resp.StatusCode != 200 && resp.StatusCode != 404 {
-					t.Logf("Unexpected status %d for %s. Body: %s", resp.StatusCode, tc.path, string(body))
+					// t.Logf("Unexpected status %d for %s. Body: %s", resp.StatusCode, tc.path, string(body))
 				}
 			})
 		}

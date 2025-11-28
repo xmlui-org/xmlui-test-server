@@ -3,8 +3,8 @@ package cfgldr
 import (
 	"strings"
 
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
-	_ "github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars/dtclassifiers"
+	"github.com/mikeschinkel/go-pathvars"
+	_ "github.com/mikeschinkel/go-pathvars/dtclassifiers"
 )
 
 var _ APIParam = (*APIParamV1)(nil)

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	cliutil "github.com/mikeschinkel/go-cliutil"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
+	"github.com/mikeschinkel/go-pathvars"
 )
 
 // Format JSON is a pretty manner

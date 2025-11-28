@@ -44,7 +44,6 @@ make build
 ## Running tests
 ```bash
 make test 
-make test xmluisvrr/pathvars
 make test xmluisvrr test 
 ```
 

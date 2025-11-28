@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mikeschinkel/go-pathvars"
+	"github.com/mikeschinkel/go-pathvars/pvtypes"
 	"github.com/mikeschinkel/go-rfc9457"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars/pvtypes"
 
 	. "github.com/mikeschinkel/go-doterr"
 )

@@ -516,7 +516,7 @@ This approach prioritizes **stability and consistency** while keeping the door o
 
 ### Startup Flow
 ```
-JSON Config → Router.Add() → Parse Templates → Compile Regex → Ready
+JSON Config → Router.Add() → Parse Templates → Ready
 ```
 
 1. Load endpoint configs from JSON
@@ -524,7 +524,6 @@ JSON Config → Router.Add() → Parse Templates → Compile Regex → Ready
 3. Parser extracts method, segments, parameters, types, constraints
 4. Build regex for each template
 5. Store compiled route with its config index
-6. Call `router.Compile()` to finalize
 
 ### Request Flow
 ```
@@ -637,7 +636,6 @@ for i, ep := range config.Endpoints {
         return err
     }
 }
-router.Compile()
 
 // Per Request
 result, err := router.Match(req.Method, req.URL.Path)

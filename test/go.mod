@@ -21,6 +21,7 @@ require (
 	github.com/mikeschinkel/go-dt/dtx v0.2.1 // indirect
 	github.com/mikeschinkel/go-jsonxtractr v0.1.0 // indirect
 	github.com/mikeschinkel/go-logutil v0.1.1 // indirect
+	github.com/mikeschinkel/go-pathvars v0.1.0 // indirect
 )
 
 replace github.com/xmlui-org/xmlui-test-server/xmluisvr => ../xmluisvr

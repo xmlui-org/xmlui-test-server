@@ -30,6 +30,8 @@ github.com/mikeschinkel/go-jsonxtractr v0.1.0 h1:Sgb8LCSbHth+Sh2s2xPoFlGAF/CTrvF
 github.com/mikeschinkel/go-jsonxtractr v0.1.0/go.mod h1:gCARx5ya6mSN7tT+XTMVa6aBAef+AZTw6e/OsMu0GV4=
 github.com/mikeschinkel/go-logutil v0.1.1 h1:cZYRFfgdgS7HFzvHErXmrYy5cRyDscaq/nAuxupJXLY=
 github.com/mikeschinkel/go-logutil v0.1.1/go.mod h1:FTov/Lq+y1Eu817aEL0VmzL7ZlPUqYnqcmxPVMlrvmE=
+github.com/mikeschinkel/go-pathvars v0.1.0 h1:TOk3kROaLHUA/hlYMslJeTzqKWqp+YqeZX7OjMLJZR8=
+github.com/mikeschinkel/go-pathvars v0.1.0/go.mod h1:pqm9AAbg8duYCWb81f65r2mjZovRYFMw2SWGkFiTows=
 github.com/mikeschinkel/go-rfc9457 v0.1.0 h1:6zdeZOLp0Fnz5E0paekPClGBd7JiV3/C3FwIGjdOj3c=
 github.com/mikeschinkel/go-rfc9457 v0.1.0/go.mod h1:YjUU3d3OVwCejkCB93nEtr0cDwRbkFUhcgbhkEJzZ30=
 github.com/mikeschinkel/go-sqlparams v0.1.1 h1:x0gueEeqIj8qMx4Yval8Nl/izI5xlHaYQ1JdA28K33M=

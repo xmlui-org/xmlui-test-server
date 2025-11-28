@@ -372,7 +372,7 @@ func setupTestServer(t *testing.T, configContent string) *TestServer {
 				t.Errorf("  [%d] %v", i+1, entry)
 			}
 		}
-		t.Logf("Server output:\n%s", env.bufferedWriter.GetAllOutput())
+		// t.Logf("Server output:\n%s", env.bufferedWriter.GetAllOutput())
 		t.Fatalf("Server did not become ready within timeout")
 	}
 
@@ -408,7 +408,7 @@ func (s *TestServer) Cleanup() {
 	case <-done:
 		// Server shut down gracefully
 	case <-time.After(5 * time.Second):
-		s.t.Log("Warning: Server did not shut down gracefully within 5 seconds")
+		// s.t.Log("Warning: Server did not shut down gracefully within 5 seconds")
 	}
 
 	// Check for server errors (ignore context cancellation)
@@ -433,9 +433,9 @@ func (s *TestServer) runTestRequest(req testRequest) {
 
 		// Log error context helper
 		onErr := func() {
-			logEntries, _ := s.env.bufferedLogHandler.GetLogEntries()
-			t.Logf("Log entries: %v", logEntries)
-			t.Log(s.env.bufferedWriter.GetAllOutput())
+			//logEntries, _ := s.env.bufferedLogHandler.GetLogEntries()
+			// t.Logf("Log entries: %v", logEntries)
+			// t.Log(s.env.bufferedWriter.GetAllOutput())
 		}
 
 		// Make HTTP request
@@ -453,12 +453,12 @@ func (s *TestServer) runTestRequest(req testRequest) {
 			onErr()
 			logEntries, err := s.env.bufferedLogHandler.GetLogEntries()
 			if err != nil {
-				t.Logf("Error getting log entries: %v", err)
+				// t.Logf("Error getting log entries: %v", err)
 			} else if len(logEntries) > 0 {
-				t.Logf("Buffered log entries (%d total):", len(logEntries))
-				for i, entry := range logEntries {
-					t.Logf("  [%d] %v", i+1, entry)
-				}
+				// t.Logf("Buffered log entries (%d total):", len(logEntries))
+				//for i, entry := range logEntries {
+				//	t.Logf("  [%d] %v", i+1, entry)
+				//}
 			}
 			t.Errorf("Expected status %d, got %d. Response: %s",
 				req.expectedStatus, resp.StatusCode, responseBody)

@@ -49,10 +49,10 @@ import (
 
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-pathvars"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/pathvars"
 
 	. "github.com/mikeschinkel/go-doterr"
 )
@@ -192,9 +192,6 @@ func (api *API) initializeRouter() (err error) {
 	}
 	if len(errs) != 0 {
 		err = CombineErrs(errs)
-	}
-	if err == nil {
-		err = api.Router.Compile()
 	}
 	return err
 }
