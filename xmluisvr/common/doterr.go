@@ -78,7 +78,7 @@ var (
 // Returns a validation error joined with the partial entry if validation fails.
 func NewErr(parts ...any) error {
 	// Separate optional trailing cause from the parts
-	cause, coreParts := extractTrailingCause(parts)
+	coreParts, cause := extractTrailingCause(parts)
 
 	if validationErr := validateNewParts(coreParts); validationErr != nil {
 		// Return validation error joined as first error
@@ -452,26 +452,31 @@ func (c combined) Unwrap() []error {
 //   - It's the last element, AND
 //   - It comes after at least one sentinel, AND
 //   - It's not part of an incomplete key-value pair (would leave odd count)
-func extractTrailingCause(parts []any) (error, []any) {
+func extractTrailingCause(parts []any) (_ []any, err error) {
+	var lastIdx, sentinelCount, nonSentinelCount int
+	var ok bool
+
 	if len(parts) == 0 {
-		return nil, parts
+		goto end
 	}
 
-	lastIdx := len(parts) - 1
-	lastErr, isErr := parts[lastIdx].(error)
-	if !isErr {
-		return nil, parts
+	lastIdx = len(parts) - 1
+	err, ok = parts[lastIdx].(error)
+	if !ok {
+		goto end
 	}
 
 	// Count sentinels at the beginning (but don't count doterr.entry as sentinel)
-	sentinelCount := 0
+	sentinelCount = 0
 	for i := 0; i < len(parts); i++ {
 		err, ok := parts[i].(error)
 		if !ok {
 			break
 		}
 		// doterr.entry should not count as a sentinel - it's a wrapped error
-		if _, isEntry := err.(entry); isEntry {
+		//goland:noinspection GoTypeAssertionOnErrors
+		_, ok = err.(entry)
+		if ok {
 			break
 		}
 		sentinelCount++
@@ -479,19 +484,21 @@ func extractTrailingCause(parts []any) (error, []any) {
 
 	// If we only have errors (all sentinels), the last one is not a cause
 	if sentinelCount == len(parts) {
-		return nil, parts
+		goto end
 	}
 
 	// Check if removing the last error would leave an odd number of non-sentinel args
 	// (which would mean the error is actually a value for a key)
-	nonSentinelCount := len(parts) - sentinelCount
+	nonSentinelCount = len(parts) - sentinelCount
 	if (nonSentinelCount-1)%2 != 0 {
 		// Removing last error leaves odd count - it's a value, not a cause
-		return nil, parts
+		goto end
 	}
 
+	parts = parts[:lastIdx]
+end:
 	// Last error is a trailing cause
-	return lastErr, parts[:lastIdx]
+	return parts, err
 }
 
 // validateNewParts validates that parts conforms to the expected pattern for NewErr:
