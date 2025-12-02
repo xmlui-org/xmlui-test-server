@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 // Mode Durability  Performance  Journal Notes

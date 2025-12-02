@@ -5,8 +5,6 @@ import (
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 
 	"github.com/mikeschinkel/go-cliutil"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 // Run starts the xmlui-localsvr with the provided configuration and context.

@@ -1,22 +1,14 @@
 package sqlite3pkg
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
-	"runtime"
-	"sort"
 	"strings"
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 type (
@@ -27,11 +19,11 @@ type (
 var _ dbpkg.DBExtension = (*Extension)(nil)
 
 type Extension struct {
-	id           common.ExtensionId
-	version      common.Version
-	name         string
-	docsURL      common.FullURL
-	repoURL      common.FullURL
+	id      common.ExtensionId
+	version common.Version
+	name    string
+	//docsURL      common.FullURL
+	//repoURL      common.FullURL
 	downloadURLs []common.FullURL
 	filePath     dt.Filepath // Absolute or relative filepath, defaults to well-known directory structure
 	loadOrder    common.LoadOrder
@@ -125,67 +117,68 @@ func (ext *Extension) DBExtension() {}
 // Resolve decides which file to load and where it came from.
 func (ext *Extension) Resolve(db *SQLite3) (path string, err error) {
 	panic("IMPLEMENT EXTENSION RESOLVER")
-	return "", nil
 }
 
-func configRoot() (string, error) {
-	root, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(root, "xmlui", "sqlite", "exts"), nil
-}
-
-func platformKey() string { return runtime.GOOS + "-" + runtime.GOARCH }
-
-func sha256Hex(b []byte) string {
-	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:])
-}
-
-// findUserVersions returns available versions in config dir for an extension.
-func findUserVersions(name string) ([]string, error) {
-	root, err := configRoot()
-	if err != nil {
-		return nil, err
-	}
-	base := filepath.Join(root, name)
-	d, err := os.ReadDir(base)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	var vs []string
-	for _, e := range d {
-		if e.IsDir() {
-			vs = append(vs, e.Name())
-		}
-	}
-	sort.Strings(vs) // lexical; OK if you use simple semver
-	return vs, nil
-}
-
-func verifySHA256(path, want string) error {
-	if want == "" {
-		return nil
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	got := sha256Hex(b)
-	if !strings.EqualFold(got, want) {
-		return fmt.Errorf("sha256 mismatch: got %s want %s", got, want)
-	}
-	return nil
-}
-
-func extDir(name, version string) (string, error) {
-	root, err := configRoot()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(root, name, version, platformKey()), nil
-}
+//func configRoot() (root string, err error) {
+//	root, err = os.UserConfigDir()
+//	if err != nil {
+//		goto end
+//	}
+//	root = filepath.Join(root, "xmlui", "sqlite", "exts")
+//end:
+//	return root, err
+//}
+//
+//func platformKey() string { return runtime.GOOS + "-" + runtime.GOARCH }
+//
+//func sha256Hex(b []byte) string {
+//	sum := sha256.Sum256(b)
+//	return hex.EncodeToString(sum[:])
+//}
+//
+//// findUserVersions returns available versions in config dir for an extension.
+//func findUserVersions(name string) ([]string, error) {
+//	root, err := configRoot()
+//	if err != nil {
+//		return nil, err
+//	}
+//	base := filepath.Join(root, name)
+//	d, err := os.ReadDir(base)
+//	if err != nil {
+//		if errors.Is(err, os.ErrNotExist) {
+//			return nil, nil
+//		}
+//		return nil, err
+//	}
+//	var vs []string
+//	for _, e := range d {
+//		if e.IsDir() {
+//			vs = append(vs, e.Name())
+//		}
+//	}
+//	sort.Strings(vs) // lexical; OK if you use simple semver
+//	return vs, nil
+//}
+//
+//func verifySHA256(path, want string) error {
+//	if want == "" {
+//		return nil
+//	}
+//	b, err := os.ReadFile(path)
+//	if err != nil {
+//		return err
+//	}
+//	got := sha256Hex(b)
+//	if !strings.EqualFold(got, want) {
+//		return fmt.Errorf("sha256 mismatch: got %s want %s", got, want)
+//	}
+//	return nil
+//}
+//
+//func extDir(name, version string) (string, error) {
+//	root, err := configRoot()
+//	if err != nil {
+//		return "", err
+//	}
+//	return filepath.Join(root, name, version, platformKey()), nil
+//}

@@ -30,7 +30,8 @@ type URLPath string
 //			* : for multi-segment path parameters like {file_path*}
 var relativeURLPathRegexpString = `[a-zA-Z0-9/_.{}:?&\[\]@!$;=+,*-]*`
 var urlPathRegexp = regexp.MustCompile(`^(/?` + relativeURLPathRegexpString + `)$`)
-var relativeURLPathRegexp = regexp.MustCompile(`^(` + relativeURLPathRegexpString + `)$`)
+
+//var relativeURLPathRegexp = regexp.MustCompile(`^(` + relativeURLPathRegexpString + `)$`)
 
 // ParseURLPath currently parses the FULL relative URL *TEMPLATE*, not just the path.
 // TODO Rename this to ParseURLPathTemplate, or similar?

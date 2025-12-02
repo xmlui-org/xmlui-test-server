@@ -8,8 +8,6 @@ import (
 	"github.com/mikeschinkel/go-rfc9457"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 var paType = (*PayloadArgs)(nil)

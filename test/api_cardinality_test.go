@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 )
 
@@ -105,27 +106,63 @@ func TestAPICardinality(t *testing.T) {
 
 	t.Run("cardinality_one_with_no_results", func(t *testing.T) {
 		// Test that cardinality="one" with no matching records returns appropriate response
-		// This should either return null, empty object, or 404 depending on implementation
+		// Valid responses are:
+		//   - 404 Not Found (with RFC 9457 error response)
+		//   - 200 OK with null, empty object {}, or empty array []
 		resp, body, err := makeHTTPRequest(server.BaseURL, "GET", "/api/users/99999", "")
 		if err != nil {
 			t.Fatalf("HTTP request failed: %v", err)
 		}
 		defer closeOrError(t, resp.Body)
 
-		// Implementation can choose to return 404 or 200 with null/empty
-		// Document the actual behavior here
-		if resp.StatusCode == 200 {
+		switch resp.StatusCode {
+		case http.StatusOK:
+			// Verify response is null, empty object {}, or empty array []
 			bodyStr := string(body)
-			if bodyStr != "null" && bodyStr != "{}" && bodyStr != "" {
-				var result map[string]interface{}
+			if bodyStr != "null" && bodyStr != "{}" && bodyStr != "[]" {
+				// Try to parse as JSON to verify it's valid
+				var result interface{}
 				if err := json.Unmarshal(body, &result); err != nil {
-					// t.Logf("Response for non-existent record: %s", bodyStr)
+					t.Errorf("Response is not valid JSON: %v. Body: %s", err, bodyStr)
+					return
+				}
+
+				// If it's a non-empty object or array, that's unexpected
+				switch v := result.(type) {
+				case map[string]interface{}:
+					if len(v) > 0 {
+						t.Errorf("Expected null or empty object for non-existent record, got non-empty object: %s", bodyStr)
+					}
+				case []interface{}:
+					if len(v) > 0 {
+						t.Errorf("Expected null or empty response for non-existent record, got non-empty array: %s", bodyStr)
+					}
+				default:
+					t.Errorf("Expected null or empty object for non-existent record, got: %s", bodyStr)
 				}
 			}
-		} else if resp.StatusCode == 404 {
-			// t.Logf("Server returns 404 for non-existent records with cardinality='one'")
-		} else {
-			// t.Logf("Unexpected status code %d for non-existent record", resp.StatusCode)
+			// t.Logf("Server returns 200 OK with body: %s", bodyStr)
+
+		case http.StatusNotFound:
+			// Verify it's a valid RFC 9457 error response
+			var result map[string]interface{}
+			if err := json.Unmarshal(body, &result); err != nil {
+				t.Errorf("404 response is not valid JSON: %v. Body: %s", err, string(body))
+				return
+			}
+
+			// RFC 9457 requires at least "type" field
+			if _, exists := result["type"]; !exists {
+				t.Errorf("404 response missing RFC 9457 'type' field. Body: %s", string(body))
+			}
+			if _, exists := result["status"]; !exists {
+				t.Errorf("404 response missing RFC 9457 'status' field. Body: %s", string(body))
+			}
+			// t.Logf("Server returns 404 Not Found with RFC 9457 error")
+
+		default:
+			t.Errorf("Expected status 200 OK or 404 Not Found for non-existent record, got %d. Body: %s",
+				resp.StatusCode, string(body))
 		}
 	})
 
@@ -148,9 +185,9 @@ func TestAPICardinality(t *testing.T) {
 		}
 
 		// For queries with no results, cardinality="many" should return empty array
-		if len(result) != 0 {
-			// t.Logf("Note: cardinality='many' returned %d results. Body: %s", len(result), string(body))
-		}
+		//if len(result) != 0 {
+		//	t.Logf("Note: cardinality='many' returned %d results. Body: %s", len(result), string(body))
+		//}
 	})
 
 	t.Run("cardinality_one_with_multiple_results", func(t *testing.T) {
@@ -196,23 +233,52 @@ func TestAPICardinalityWithDifferentDataTypes(t *testing.T) {
 			t.Fatalf("Response is not valid JSON: %v. Body: %s", err, string(body))
 		}
 
-		// Verify array structure and type diversity
-		if len(result) > 0 {
-			first := result[0]
-			// Verify we have different types (int, string, bool, etc.)
-			hasInt := false
-			hasString := false
-			for _, v := range first {
-				switch v.(type) {
-				case float64: // JSON numbers are float64
-					hasInt = true
-				case string:
-					hasString = true
-				}
+		// Verify array has at least one element to test
+		if len(result) == 0 {
+			t.Fatalf("Expected array with elements to test data types, got empty array")
+		}
+
+		// Verify first element has mixed data types as expected from users table
+		first := result[0]
+
+		// Check for expected fields with correct types
+		// id should be a number (float64 in JSON)
+		if id, exists := first["id"]; !exists {
+			t.Errorf("Expected 'id' field in response")
+		} else if _, ok := id.(float64); !ok {
+			t.Errorf("Expected 'id' to be a number, got %T", id)
+		}
+
+		// name should be a string
+		if name, exists := first["name"]; !exists {
+			t.Errorf("Expected 'name' field in response")
+		} else if _, ok := name.(string); !ok {
+			t.Errorf("Expected 'name' to be a string, got %T", name)
+		}
+
+		// email should be a string
+		if email, exists := first["email"]; !exists {
+			t.Errorf("Expected 'email' field in response")
+		} else if _, ok := email.(string); !ok {
+			t.Errorf("Expected 'email' to be a string, got %T", email)
+		}
+
+		// Verify we have both numeric and string types present (mixed types test)
+		hasNumeric := false
+		hasString := false
+		for _, v := range first {
+			switch v.(type) {
+			case float64:
+				hasNumeric = true
+			case string:
+				hasString = true
 			}
-			if !hasInt || !hasString {
-				// t.Logf("Response contains: %v", first)
-			}
+		}
+		if !hasNumeric {
+			t.Errorf("Expected at least one numeric field in response, got: %v", first)
+		}
+		if !hasString {
+			t.Errorf("Expected at least one string field in response, got: %v", first)
 		}
 	})
 }

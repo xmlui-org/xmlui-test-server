@@ -5,9 +5,9 @@ import (
 	"errors"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/mikeschinkel/go-cliutil"
+	"github.com/mikeschinkel/go-dt"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 )
@@ -33,7 +33,7 @@ func RunCLI(cfgOpts *cfgldr.Options) {
 	if cfgOpts == nil {
 		cfgOpts, err = cfgldr.GetOptions()
 		if err != nil {
-			fprintf(os.Stderr, "Invalid option(s): %v\n", strings.Replace(err.Error(), "\n", "; ", -1))
+			cliutil.Stderrf("Invalid option(s): %v\n", strings.ReplaceAll(err.Error(), "\n", "; "))
 			os.Exit(cliutil.ExitOptionsParseError)
 		}
 	}
@@ -44,8 +44,6 @@ func RunCLI(cfgOpts *cfgldr.Options) {
 		Verbosity: cliutil.Verbosity(cfgOpts.Verbosity),
 	})
 
-	// TODO: Make 10 second timeout configurable
-	context.WithTimeout(context.Background(), 10*time.Second)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -63,7 +61,7 @@ func RunCLI(cfgOpts *cfgldr.Options) {
 		os.Exit(cliutil.ExitConfigParseError)
 	}
 	//goland:noinspection GoMaybeNil
-	defer common.CloseOrLog(runArgs.Config.Database)
+	defer dt.CloseOrLog(runArgs.Config.Database)
 
 	common.SetLogger(runArgs.Config.Logger)
 	wl = cliutil.NewWriterLogger(writer, runArgs.Config.Logger)

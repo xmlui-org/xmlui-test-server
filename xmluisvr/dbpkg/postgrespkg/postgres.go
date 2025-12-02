@@ -16,8 +16,6 @@ import (
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 func init() {
@@ -107,7 +105,7 @@ func (p *Postgres) Query(ctx dbpkg.Context, q string, params ...any) (*sql.Rows,
 }
 
 func (p *Postgres) ValidatedConnection(ctx dbpkg.Context, dbType dbpkg.DatabaseType, connStr common.ConnectString) (err error) {
-	return p.PingDB(nil, dbType, connStr)
+	return p.PingDB(ctx, dbType, connStr)
 }
 
 // ParseConnectString injects or overrides the port in a Postgres connection string (URL or DSN format)
@@ -124,7 +122,8 @@ func ParsePGConnectString(cs string, port int) (_ common.ConnectString, err erro
 		goto end
 	}
 	if postgresPrefixRE.MatchString(cs) {
-		u, err := url.Parse(cs)
+		var u *url.URL
+		u, err = url.Parse(cs)
 		if err != nil {
 			goto end
 		}

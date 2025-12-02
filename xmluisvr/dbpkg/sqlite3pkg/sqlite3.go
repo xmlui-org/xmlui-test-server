@@ -16,8 +16,6 @@ import (
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 func init() {
@@ -56,7 +54,7 @@ func (s *SQLite3) allowVTable(extName string) (allow bool) {
 		goto end
 	}
 end:
-	return false
+	return allow
 }
 
 func (*SQLite3) ParseQueryString(query string) (_ sqlparams.QueryString, err error) {
@@ -230,9 +228,9 @@ func (s *SQLite3) Open(ctx context.Context) (err error) {
 	// manage concurrent database connections, and since this is intended as a local
 	// dev server and not a production server that should be more than sufficient.
 	s.V3().Printf("Setting MaxOpenConnections to 1\n")
-	s.DB.SetMaxOpenConns(1)
+	s.SetMaxOpenConns(1)
 	s.V3().Printf("Setting MaxIdleConnections to 1\n")
-	s.DB.SetMaxIdleConns(1)
+	s.SetMaxIdleConns(1)
 
 	// Sanity ping with deadline
 	timeout = s.Options().Timeout
@@ -243,7 +241,7 @@ func (s *SQLite3) Open(ctx context.Context) (err error) {
 	ctx, cancel = context.WithTimeout(ctx, timeout)
 	defer cancel()
 	s.V3().Printf("Pinging database to confirm connection\n")
-	err = s.DB.PingContext(ctx)
+	err = s.PingContext(ctx)
 	if err != nil {
 		err = NewErr(
 			dt.ErrFailedToPingDatabase,
@@ -293,7 +291,7 @@ func (s *SQLite3) execQueriesIfExists(qt string, q *dbpkg.MultipartQuery) (err e
 	s.V2().InfoPrint("Running queries", "query_type", qt)
 	// TODO Split out individual queries and run the separately to allow for more
 	//      targeted error messages.
-	_, err = s.DB.Exec(string(q.Source()))
+	_, err = s.Exec(string(q.Source()))
 	if err != nil {
 		// TODO: Do we want to fail to run the server or allow failed initialization SQL?
 		s.WarnError("Failed to run query", "type", qt, "error", err, "query", q.Source())
@@ -424,7 +422,7 @@ func (s *SQLite3) LoadExtension(dbExt dbpkg.DBExtension) (err error) {
 
 	// TODO: This is vulnerable to SQL injection; we should harden it
 	loadSQL = fmt.Sprintf("SELECT load_extension('%s')", strings.ReplaceAll(absPath, "'", "''"))
-	_, err = s.DB.Exec(loadSQL)
+	_, err = s.Exec(loadSQL)
 	if err != nil {
 		s.WarnError("Extension loading failed with", "error", err)
 		goto end
@@ -446,7 +444,7 @@ func (s *SQLite3) IsAuthorizedSQLite3Operation(op int, funcName string) (allowed
 	var deniedOpMode dbpkg.AccessMode
 	// Test these special cases first
 	if op == sqlite3.SQLITE_FUNCTION &&
-		s.database.AccessMode < dbpkg.SuperAdminMode &&
+		s.AccessMode < dbpkg.SuperAdminMode &&
 		strings.EqualFold(funcName, "load_extension") {
 		goto end
 	}
@@ -454,7 +452,7 @@ func (s *SQLite3) IsAuthorizedSQLite3Operation(op int, funcName string) (allowed
 	if !ok {
 		goto end
 	}
-	allowed = s.database.AccessMode > deniedOpMode
+	allowed = s.AccessMode > deniedOpMode
 end:
 	return allowed
 }

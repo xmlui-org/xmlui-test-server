@@ -3,10 +3,10 @@ package dbpkg
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/mikeschinkel/go-cliutil"
-	. "github.com/mikeschinkel/go-doterr"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/mikeschinkel/go-sqlparams"
@@ -101,11 +101,14 @@ func (db *BaseDatabase) checkForExtensions() {
 		goto end
 	}
 	msg = "LoadExtension() not implemented for database type"
-	db.Writer.Errorf("%s '%s'. Did you forget to implement?  Extensions:", msg, db.dbType)
+	db.writeErrorf("%s '%s'. Did you forget to implement?  Extensions:", msg, db.dbType)
 	for _, ext := range db.extensions {
-		db.Writer.Errorf("- %s", ext.Name())
+		db.writeErrorf("- %s", ext.Name())
 	}
-	db.Logger.Error(msg, "database_type", db.dbType, "extensions", db.extensions)
+	db.logError(msg,
+		slog.String("database_type", string(db.dbType)),
+		slog.Any("extensions", db.extensions),
+	)
 end:
 }
 
@@ -128,7 +131,7 @@ func (db *BaseDatabase) SetConnectString(cs string) {
 }
 
 func (db *BaseDatabase) Query(ctx Context, q string, params ...any) (*sql.Rows, error) {
-	return db.DB.QueryContext(ctx, q, params...)
+	return db.QueryContext(ctx, q, params...)
 }
 
 // ValidateFileConnection checks for file connections which work for SQLite3 and DuckDB.
@@ -184,7 +187,7 @@ func (db *BaseDatabase) PingDB(_ Context, dbType DatabaseType, cs common.Connect
 	if err != nil {
 		goto end
 	}
-	common.CloseOrLog(sqlDB) // DO NOT move this up and defer it; that will cascade errors
+	dt.CloseOrLog(sqlDB) // DO NOT move this up and defer it; that will cascade errors
 end:
 	return err
 }
@@ -199,4 +202,18 @@ func (db *BaseDatabase) HomeRelativeFile() string {
 
 func (db *BaseDatabase) Extensions() []DBExtension {
 	return db.extensions
+}
+
+// writeErrorf allows calling db.Logger.Error() where it is obvious that this
+// is writing to the stdio without the linter complaining that I can remove
+// .Writer if called directly.
+func (db *BaseDatabase) writeErrorf(format string, args ...any) {
+	db.Errorf(format, args...)
+}
+
+// logError allows calling db.Logger.Error() where it is obvious that this
+// is writing to the stdio without the linter complaining that I can remove
+// .Writer if called directly.
+func (db *BaseDatabase) logError(msg string, attrs ...any) {
+	db.Error(msg, attrs...)
 }

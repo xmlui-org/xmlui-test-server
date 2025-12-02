@@ -306,8 +306,9 @@ func MissingParametersPayload(req *http.Request, args PayloadArgs) (pr PayloadRe
 		rfc.AddExtension(ext)
 	}
 	rp = rfc9457.NewResponse(rfc)
+	pr = use.checkUsage(rp)
 end:
-	return use.checkUsage(rp)
+	return pr
 }
 
 func InvalidURLFormatErrorPayload(req *http.Request, args PayloadArgs) (pr PayloadResult) {

@@ -15,8 +15,6 @@ import (
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 //type ConnectStyle string
@@ -126,11 +124,18 @@ func ParseQueries(queries []string, args ParseQueriesArgs) (mpq *MultipartQuery,
 	db := args.Database
 	var fp dt.Filepath
 	filename := args.BaseFilename + db.QueryFileExt()
-	if args.PrimaryDirType == cfgstore.ProjectConfigDirType {
+	switch args.PrimaryDirType {
+	case cfgstore.ProjectConfigDirType:
 		baseDir, err = args.DirsProvider.ProjectDirFunc()
+		if err != nil {
+			goto end
+		}
 		fp = dt.FilepathJoin3(baseDir, ConfigSlug, filename)
-	} else {
+	default:
 		baseDir, err = args.DirsProvider.CLIConfigDirType()
+		if err != nil {
+			goto end
+		}
 		fp = dt.FilepathJoin4(baseDir, ConfigSlug, db.Type(), filename)
 	}
 	queryBytes, err = fp.ReadFile()

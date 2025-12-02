@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/mikeschinkel/go-cfgstore"
-	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/appinfo"
 	"github.com/mikeschinkel/go-logutil"
@@ -42,9 +41,8 @@ func ParseRunArgs(ctx context.Context, cfgOpts *cfgldr.Options, args *RunArgs) (
 	var logger *slog.Logger
 	var projectDir dt.DirPath
 	var logFile dt.Filepath
-	var writer cliutil.Writer
 
-	writer = args.Config.Writer
+	writer := args.Config.Writer
 
 	// Determine log file location using DirsProvider
 	if args.DirsProvider != nil {
@@ -71,7 +69,6 @@ func ParseRunArgs(ctx context.Context, cfgOpts *cfgldr.Options, args *RunArgs) (
 		writer.Printf("Warning: Failed to create log file %s: %v\n", logFile, err)
 		writer.Printf("Continuing without writing logs to disk\n")
 		// Continue without logger - server will handle nil logger
-		err = nil
 	}
 
 	// Load root configuration

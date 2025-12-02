@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/mikeschinkel/go-rfc9457"
-	testutil "github.com/mikeschinkel/go-testutil"
+	"github.com/mikeschinkel/go-testutil"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 )
@@ -19,8 +19,7 @@ func TestMain(m *testing.M) {
 	apiresp.SetGitHubRepoURL(common.GitHubRepoURL)
 
 	// Set up the buffered logger for tests
-	logger, _ := testutil.GetBufferedLogger()
-	common.SetLogger(logger)
+	common.SetLogger(testutil.GetBufferedLogger())
 
 	// Run tests
 	os.Exit(m.Run())

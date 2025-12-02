@@ -3,15 +3,12 @@ package cfgldr
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"github.com/mikeschinkel/go-cfgstore"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 const (
@@ -190,6 +187,7 @@ end:
 func (c *SQLite3ConfigV1) SetExtensions(exts []*SQLite3ExtensionConfigV1) {
 	c.Extensions = exts
 }
+
 func (c *SQLite3ConfigV1) normalizeExtensions(args cfgstore.NormalizeArgs) (err error) {
 	var errs []error
 	if len(c.Extensions) == 0 {
@@ -200,20 +198,6 @@ func (c *SQLite3ConfigV1) normalizeExtensions(args cfgstore.NormalizeArgs) (err 
 		errs = AppendErr(errs, ext.Normalize(args))
 	}
 	err = CombineErrs(errs)
-end:
-	return err
-}
-
-func (c *SQLite3ConfigV1) normalizeConnectString2(opts *Options) (err error) {
-	var cs string
-	if opts.ConnectString == "" {
-		cs = string(dt.FilepathJoin(opts.Webroot, common.DefaultSQLite3Database))
-		goto end
-	}
-	if !dt.DirPath(opts.ConnectString).IsAbs() {
-		cs = filepath.Join(opts.Webroot, opts.ConnectString)
-	}
-	c.SetConnectString(cs)
 end:
 	return err
 }

@@ -10,7 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	testutil "github.com/mikeschinkel/go-testutil"
+	"github.com/mikeschinkel/go-cliutil"
+	"github.com/mikeschinkel/go-testutil"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 )
 
@@ -31,7 +32,7 @@ func BootstrapSQL() string {
 func TestMain(m *testing.M) {
 	// Setup test environment
 	if err := setup(); err != nil {
-		stdErrf("Setup failed: %v\n", err)
+		cliutil.Stderrf("Setup failed: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -75,8 +76,4 @@ func setup() error {
 // teardown cleans up the test environment after all tests have run.
 func teardown() {
 	// Cleanup code here if needed in the future
-}
-
-func stdErrf(format string, args ...any) {
-	_, _ = fmt.Fprintf(os.Stderr, format, args...)
 }

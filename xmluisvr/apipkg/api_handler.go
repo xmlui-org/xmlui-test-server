@@ -10,8 +10,6 @@ import (
 	"github.com/mikeschinkel/go-rfc9457"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 // HandleAPIFunc returns an HTTP handler function that processes API requests.
@@ -77,7 +75,6 @@ func (api *API) HandleAPIFunc(db dbpkg.Database) http.HandlerFunc {
 			// one example being rfc9457.Response.
 			api.SendErrorResponse(args.SendResponseArgs(err))
 		}
-		return
 	}
 }
 
@@ -167,7 +164,7 @@ func (api *API) GetQueryResult(ctx Context, args HandlerHelperArgs) (dbResult ap
 
 	api.V3().InfoPrint("Database query submitted.",
 		"requestor_ip", args.HTTPRequest.RemoteAddr,
-		"query", strings.Replace(string(args.DBQuery), "\n", " ", -1),
+		"query", strings.ReplaceAll(string(args.DBQuery), "\n", " "),
 	)
 
 end:
@@ -240,9 +237,6 @@ func (api *API) handleFailedMatch(err error, args HandlerHelperArgs) error {
 	}
 end:
 	return err
-}
-
-func getErrFromPayload(cause error, payload apiresp.ResponsePayload, err error) {
 }
 
 func (api *API) tryMatchingRequest(args HandlerHelperArgs) (result pathvars.MatchResult, err error) {

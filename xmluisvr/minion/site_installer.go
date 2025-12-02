@@ -23,7 +23,7 @@ type SiteInstaller struct {
 	SourceDir         dt.DirPath
 	Branch            string
 	Tag               string
-	Force             bool
+	Overwrite         bool
 	DryRun            bool
 	Writer            cliutil.Writer
 	ConfigPath        dt.PathSegment
@@ -41,7 +41,7 @@ type SiteInstallerArgs struct {
 	SourceDir dt.DirPath
 	Branch    string
 	Tag       string
-	Force     bool
+	Overwrite bool
 	DryRun    bool
 	Writer    cliutil.Writer
 }
@@ -60,7 +60,7 @@ func NewSiteInstaller(args SiteInstallerArgs) *SiteInstaller {
 		SourceDir:         args.SourceDir,
 		Branch:            args.Branch,
 		Tag:               args.Tag,
-		Force:             args.Force,
+		Overwrite:         args.Overwrite,
 		DryRun:            args.DryRun,
 		Writer:            args.Writer,
 	}
@@ -103,7 +103,7 @@ func (si *SiteInstaller) Install() (result *InstallResult, err error) {
 		err = fmt.Errorf("failed to check existence of install directory %s: %w", installDir, err)
 		goto end
 	}
-	if exists && !si.Force {
+	if exists && !si.Overwrite {
 		err = fmt.Errorf("demo '%s' already exists at %s\nUse --force to overwrite", si.Manifest.Slug, installDir)
 		goto end
 	}
@@ -131,7 +131,7 @@ func (si *SiteInstaller) Install() (result *InstallResult, err error) {
 	job = NewCopyJob(CopyJobArgs{
 		GlobRules: globRules,
 		DestDir:   installDir,
-		Force:     si.Force,
+		Overwrite: si.Overwrite,
 		DryRun:    si.DryRun,
 		Writer:    si.Writer,
 	})

@@ -2,8 +2,6 @@ package dbpkg
 
 import (
 	"github.com/mikeschinkel/go-sqlparams"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 type (
@@ -56,5 +54,5 @@ end:
 	if err != nil {
 		err = WithErr(ErrInvalidCardinality, err)
 	}
-	return qr, err
+	return content, err
 }

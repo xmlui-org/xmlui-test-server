@@ -8,8 +8,6 @@ import (
 
 	"github.com/mikeschinkel/go-pathvars"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 var (
@@ -200,7 +198,7 @@ end:
 func ParseEndpointParam(nameSpec string, cfg cfgldr.APIParam) (p EndpointParam, err error) {
 	var props *pathvars.NameSpecProps
 	var cc []pathvars.Constraint
-	var dt pathvars.PVDataType
+	var dataType pathvars.PVDataType
 	param, ok := cfg.(cfgldr.APIParamV1)
 	if !ok {
 		paramSpec, ok := cfg.(cfgldr.APIParamsMapValue)
@@ -226,21 +224,21 @@ func ParseEndpointParam(nameSpec string, cfg cfgldr.APIParam) (p EndpointParam, 
 		// don't see how it could be possible, but maybe Goland knows something I don't?
 		panic(fmt.Sprintf("NameSpecProps are nil when err is also nil; spec=%s", param.NameSpec))
 	}
-	if props.DataType != nil {
-		dt = *props.DataType
-	}
+	//if props.DataType != nil {
+	//	dataType = *props.DataType
+	//}
 	if param.Type != "" {
-		dt, err = pathvars.ParsePVDataType(param.Type)
+		dataType, err = pathvars.ParsePVDataType(param.Type)
 		if err != nil {
 			goto end
 		}
-		cc, err = pathvars.ParseConstraints(param.Constraints, dt)
+		cc, err = pathvars.ParseConstraints(param.Constraints, dataType)
 		if err != nil {
 			goto end
 		}
 		p = NewEndpointParam(EndpointParamArgs{
 			Props:       *props,
-			Type:        dt,
+			Type:        dataType,
 			Constraints: cc,
 			RawValue:    param.String(),
 		})
@@ -283,7 +281,7 @@ type EndpointParam struct {
 
 func (epp *EndpointParam) NameSpec() (ns pathvars.PVNameSpec) {
 	if epp.nameSpec == "" {
-		epp.nameSpec = pathvars.PVNameSpec(epp.Props.String())
+		epp.nameSpec = pathvars.PVNameSpec(epp.String())
 	}
 	return epp.nameSpec
 }
@@ -297,7 +295,7 @@ func (epp *EndpointParam) HasProps() bool {
 }
 
 func (epp *EndpointParam) DebugString() string {
-	return string(epp.Props.Name)
+	return string(epp.Name)
 }
 func (epp *EndpointParam) String() (s string) {
 	var sb strings.Builder
@@ -311,7 +309,7 @@ func (epp *EndpointParam) String() (s string) {
 		cs = sb.String()
 		cs = cs[:len(cs)-1]
 	}
-	name := string(epp.Props.Name)
+	name := string(epp.Name)
 	typ := string(epp.Type.Slug())
 	if cs == "" && name == typ {
 		s = fmt.Sprintf("{%s}", name)

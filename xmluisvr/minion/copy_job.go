@@ -10,7 +10,7 @@ import (
 type CopyJob struct {
 	GlobRules *dtglob.GlobRules // What files to copy (pattern-based rules)
 	DestDir   dt.DirPath        // Where to install
-	Force     bool              // Overwrite existing files
+	Overwrite bool              // Overwrite existing files
 	ModeFunc  dt.EntryModeFunc  // Permission callback (nil = preserve source)
 	DryRun    bool              // Simulate without changes
 	Writer    cliutil.Writer    // Progress/status output
@@ -20,7 +20,7 @@ type CopyJob struct {
 type CopyJobArgs struct {
 	GlobRules *dtglob.GlobRules
 	DestDir   dt.DirPath
-	Force     bool
+	Overwrite bool
 	ModeFunc  dt.EntryModeFunc
 	DryRun    bool
 	Writer    cliutil.Writer
@@ -31,7 +31,7 @@ func NewCopyJob(args CopyJobArgs) *CopyJob {
 	return &CopyJob{
 		GlobRules: args.GlobRules,
 		DestDir:   args.DestDir,
-		Force:     args.Force,
+		Overwrite: args.Overwrite,
 		ModeFunc:  args.ModeFunc,
 		DryRun:    args.DryRun,
 		Writer:    args.Writer,
@@ -46,7 +46,7 @@ func (cj *CopyJob) Run() (err error) {
 	}
 
 	err = cj.GlobRules.CopyTo(cj.DestDir, &dt.CopyOptions{
-		Force:        cj.Force,
+		Overwrite:    cj.Overwrite,
 		DestModeFunc: cj.ModeFunc,
 	})
 

@@ -242,7 +242,8 @@ func setupTestEnvironment(t *testing.T, configContent string) *testEnvironment {
 	dbPath := dt.FilepathJoin(rootFix.Dir(), "test.db")
 
 	// Setup buffered logger and CLI writer
-	logger, handler := testutil.GetBufferedLogger()
+	logger := testutil.GetBufferedLogger()
+	handler := testutil.GetBufferedLogHandler()
 	bufferedWriter := testutil.NewBufferedWriter()
 
 	// Set as global logger
@@ -320,8 +321,7 @@ func setupTestServer(t *testing.T, configContent string) *TestServer {
 		t.Fatalf("Failed to parse options: %v", err)
 	}
 
-	context.WithTimeout(context.Background(), 1000*time.Second)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	config, err := xmluisvr.ParseConfig(ctx, rootConfig, xmluisvr.ParseConfigArgs{
@@ -424,89 +424,6 @@ func (s *TestServer) Cleanup() {
 // Test Request Execution
 // =============================================================================
 
-// runTestRequest executes a test request against the server and validates the response
-func (s *TestServer) runTestRequest(req testRequest) {
-	s.t.Helper()
-
-	s.t.Run(req.name, func(t *testing.T) {
-		t.Helper()
-
-		// Log error context helper
-		onErr := func() {
-			//logEntries, _ := s.env.bufferedLogHandler.GetLogEntries()
-			// t.Logf("Log entries: %v", logEntries)
-			// t.Log(s.env.bufferedWriter.GetAllOutput())
-		}
-
-		// Make HTTP request
-		resp, respBody, err := makeHTTPRequest(s.BaseURL, req.method, req.path, req.body)
-		if err != nil {
-			onErr()
-			t.Fatalf("Failed to execute request: %v", err)
-		}
-		defer closeOrError(t, resp.Body)
-
-		responseBody := string(respBody)
-
-		// Verify status code
-		if resp.StatusCode != req.expectedStatus {
-			onErr()
-			logEntries, err := s.env.bufferedLogHandler.GetLogEntries()
-			if err != nil {
-				// t.Logf("Error getting log entries: %v", err)
-			} else if len(logEntries) > 0 {
-				// t.Logf("Buffered log entries (%d total):", len(logEntries))
-				//for i, entry := range logEntries {
-				//	t.Logf("  [%d] %v", i+1, entry)
-				//}
-			}
-			t.Errorf("Expected status %d, got %d. Response: %s",
-				req.expectedStatus, resp.StatusCode, responseBody)
-			return
-		}
-
-		// Verify RFC 9457 error response if expected
-		if req.expectedRFC9457 != nil {
-			var got9457 rfc9457.Response
-			if err := json.Unmarshal(respBody, &got9457); err != nil {
-				t.Errorf("Response is not valid RFC 9457 JSON: %v. Body: %s", err, responseBody)
-				return
-			}
-			assertRFC9457Equal(t, &got9457, req.expectedRFC9457)
-		}
-
-		// For successful responses, verify JSON structure
-		if resp.StatusCode == 200 && len(req.expectedFields) > 0 {
-			var response interface{}
-			if err := json.Unmarshal(respBody, &response); err != nil {
-				t.Errorf("Response is not valid JSON: %v. Body: %s", err, responseBody)
-				return
-			}
-
-			// Verify expected fields exist in response
-			for _, field := range req.expectedFields {
-				if !strings.Contains(responseBody, fmt.Sprintf(`"%s"`, field)) {
-					t.Errorf("Expected field '%s' in response, got: %s", field, responseBody)
-				}
-			}
-		}
-
-		// Legacy validation (to be removed after migration to expectedRFC9457)
-		for _, expected := range req.shouldContain {
-			if !strings.Contains(responseBody, expected) {
-				t.Errorf("Expected response to contain '%s', got: %s", expected, responseBody)
-			}
-		}
-
-		// Verify content that should NOT be present
-		for _, notExpected := range req.shouldNotHave {
-			if strings.Contains(responseBody, notExpected) {
-				t.Errorf("Expected response to NOT contain '%s', got: %s", notExpected, responseBody)
-			}
-		}
-	})
-}
-
 // makeHTTPRequest creates and executes an HTTP request
 func makeHTTPRequest(baseURL, method, path, body string) (resp *http.Response, respBody []byte, err error) {
 	var httpReq *http.Request
@@ -538,7 +455,7 @@ func makeHTTPRequest(baseURL, method, path, body string) (resp *http.Response, r
 
 	respBody, err = io.ReadAll(resp.Body)
 	if err != nil {
-		common.CloseOrLog(resp.Body)
+		dt.CloseOrLog(resp.Body)
 		err = fmt.Errorf("failed to read response body: %w", err)
 		goto end
 	}
@@ -561,7 +478,7 @@ func findAvailablePort() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer common.LogOnError(listen.Close())
+	defer dt.LogOnError(listen.Close())
 
 	port := listen.Addr().(*net.TCPAddr).Port
 	return port, nil
@@ -587,42 +504,6 @@ func waitForServerReady(t *testing.T, baseURL string, timeout time.Duration) boo
 		time.Sleep(50 * time.Millisecond)
 	}
 	return false
-}
-
-// getRootConfig wraps an API endpoint definition in a full root config structure
-func getRootConfig(endpointJSON string) string {
-	return fmt.Sprintf(`{
-		"$schema": "https://xmlui.org/schemas/v1/localsvr/root-schema.json",
-		"version": 1,
-		"server": {
-			"$schema": "https://xmlui.org/schemas/v1/localsvr/server-schema.json",
-			"version": 1,
-			"host": "127.0.0.1",
-			"port": 8080,
-			"api": {
-				"$schema": "https://xmlui.org/schemas/v2/localsvr/api-schema.json",
-				"version": 2,
-				"name": "Test XMLUI Local Server API",
-				"base_path": "/api",
-				"webroot": ".",
-				"endpoints": [
-					%s
-				]
-			}
-		},
-		"database": {
-			"$schema": "https://xmlui.org/schemas/v1/localsvr/db/sqlite3-schema.json",
-			"version": 1,
-			"type": "sqlite3",
-			"filepath": "test.db",
-			"on_open_sql": [],
-			"busy_timeout": 0,
-			"journal_mode": "",
-			"synchronous": "",
-			"foreign_keys": "",
-			"wal_autocheckpoint": 0
-		}
-	}`, endpointJSON)
 }
 
 // closeOrError closes an io.Closer and fails the test if there's an error

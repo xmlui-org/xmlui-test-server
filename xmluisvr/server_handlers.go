@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/mikeschinkel/go-doterr"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apipkg"
@@ -50,9 +49,9 @@ func (svr *Server) handleHealthCheckFunc() http.HandlerFunc {
 }
 
 func (svr *Server) serveFile(w http.ResponseWriter, r *http.Request, ep dt.EntryPath) {
-	svr.Writer.Printf("Trying to serve: %s\n", ep)
+	svr.Printf("Trying to serve: %s\n", ep)
 	if ep == "" {
-		svr.Writer.Errorf("No file to load\n")
+		svr.writeErrorf("No file to load\n")
 		// TODO: Change this to a 500 error when we have time
 		http.NotFound(w, r)
 	}
@@ -63,7 +62,7 @@ func (svr *Server) serveFile(w http.ResponseWriter, r *http.Request, ep dt.Entry
 	}
 	switch status {
 	case dt.IsMissingEntry:
-		svr.Writer.Errorf("File not found: %s\n", ep)
+		svr.writeErrorf("File not found: %s\n", ep)
 		http.NotFound(w, r)
 	case dt.IsFileEntry:
 		// TODO Make this safe from path traversal exploit
@@ -102,7 +101,6 @@ end:
 			}),
 		})
 	}
-	return
 }
 
 // Handle direct SQL query requests
@@ -160,7 +158,6 @@ func (svr *Server) handleQueryFunc(db dbpkg.Database) http.HandlerFunc {
 			// one example being rfc9457.Response.
 			svr.API.SendErrorResponse(args.SendResponseArgs(err))
 		}
-		return
 	}
 }
 
@@ -262,7 +259,7 @@ end:
 }
 
 // Handle proxy requests
-func (svr *Server) handleProxyFunc(method common.HTTPMethod) http.HandlerFunc {
+func (svr *Server) handleProxyFunc() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 
@@ -291,7 +288,6 @@ func (svr *Server) handleProxyFunc(method common.HTTPMethod) http.HandlerFunc {
 			// one example being rfc9457.Response.
 			svr.API.SendErrorResponse(args.SendResponseArgs(err))
 		}
-		return
 	}
 }
 
@@ -372,8 +368,8 @@ func (svr *Server) proxyErrorHandlerFunc(targetURL *url.URL) func(http.ResponseW
 		if errors.As(err, &nErr) && nErr.Timeout() {
 			status = http.StatusGatewayTimeout
 		}
-		svr.Errorf("Proxy error for https://%s%s; %v\n", targetURL.Host, req.URL.Path, err)
-		svr.Error("Proxy error",
+		svr.writeErrorf("Proxy error for https://%s%s; %v\n", targetURL.Host, req.URL.Path, err)
+		svr.logError("Proxy error",
 			"target_host", targetURL.Host,
 			"url_path", req.URL.Path,
 			"error", err,

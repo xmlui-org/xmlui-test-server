@@ -5,9 +5,6 @@ import (
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"strings"
-	"unicode"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 type APIParamsMapKey string
@@ -359,17 +356,17 @@ end:
 	return s
 }
 
-// isPrintableASCII returns true if the string contains only ASCII printable
-// runes plus newline, carriage return, or tab. Useful for validating that
-// comments don’t contain control characters.
-func isPrintableASCII(s string) bool {
-	for _, r := range s {
-		if r > unicode.MaxASCII || (!unicode.IsPrint(r) && r != '\n' && r != '\r' && r != '\t') {
-			return false
-		}
-	}
-	return true
-}
+//// isPrintableASCII returns true if the string contains only ASCII printable
+//// runes plus newline, carriage return, or tab. Useful for validating that
+//// comments don’t contain control characters.
+//func isPrintableASCII(s string) bool {
+//	for _, r := range s {
+//		if r > unicode.MaxASCII || (!unicode.IsPrint(r) && r != '\n' && r != '\r' && r != '\t') {
+//			return false
+//		}
+//	}
+//	return true
+//}
 
 // isJSONNull checks if the byte slice represents a JSON null literal (possibly
 // surrounded by whitespace). Returns true only if it is exactly "null".

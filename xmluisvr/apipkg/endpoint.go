@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-pathvars/pvtypes"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
@@ -19,8 +18,6 @@ import (
 	"github.com/mikeschinkel/go-rfc9457"
 
 	"github.com/mikeschinkel/go-pathvars"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 // ParseEndpoints converts a slice of configuration endpoint definitions
@@ -123,16 +120,16 @@ type EndPointString string
 // Endpoint represents a parsed API endpoint configuration with all validation complete.
 // It contains the HTTP method, URL path, SQL query, parameters, and response formatting options.
 type Endpoint struct {
-	Description   string                 // Human-readable description of the endpoint
-	ParsedQuery   sqlparams.ParsedQuery  // Query to execute parsed by sqlparams.ParseBytes()
-	queryFilepath dt.Filepath            // Resolved absolute path to SQL file
-	Params        []EndpointParam        // Parameters that can be extracted from requests
-	Cardinality   sqlparams.Cardinality  // Expected number of result rows (one, many, etc.)
-	RowType       sqlparams.DBRowType    // Format for returning results (json, columns, etc.)
-	ColumnTypes   []sqlparams.DBDataType // Expected data types for result columns
-	method        common.HTTPMethod      // HTTP method (GET, POST, etc.)
-	path          pathvars.Template      // URL path pattern with parameter placeholders
-	pathParsed    bool
+	Description string                // Human-readable description of the endpoint
+	ParsedQuery sqlparams.ParsedQuery // Query to execute parsed by sqlparams.ParseBytes()
+	//queryFilepath dt.Filepath            // Resolved absolute path to SQL file
+	Params      []EndpointParam        // Parameters that can be extracted from requests
+	Cardinality sqlparams.Cardinality  // Expected number of result rows (one, many, etc.)
+	RowType     sqlparams.DBRowType    // Format for returning results (json, columns, etc.)
+	ColumnTypes []sqlparams.DBDataType // Expected data types for result columns
+	method      common.HTTPMethod      // HTTP method (GET, POST, etc.)
+	path        pathvars.Template      // URL path pattern with parameter placeholders
+	pathParsed  bool
 }
 
 func (ep *Endpoint) GetBodyValuesMap(r io.Reader, selectors []jsonxtractr.Selector) (valuesMap jsonxtractr.ValuesMap, notFound []jsonxtractr.Selector, err error) {
@@ -253,34 +250,40 @@ end:
 	return queryValues, missing, err
 }
 
-// getParameterQueryValue retrieves a parameter value from the unified valuesMap.
-// The valuesMap now contains ALL parameters (path, template query, and Params-defined query).
-// Returns the first value if the parameter exists, empty string otherwise.
-func (ep *Endpoint) getParameterQueryValue(epp EndpointParam, valuesMap pvtypes.ValuesMap) (value string) {
-	// Skip path params - already validated by Router.Match()
-	if epp.Location == pathvars.PathLocation {
-		return ""
-	}
-
-	// Skip body params - handled separately by GetParameterValues
-	if epp.Location != pathvars.QueryLocation {
-		return ""
-	}
-
-	// Get value from unified valuesMap (contains path + template query + Params-defined query)
-	// All query params are now stored as strings (first value from HTTP query)
-	rawValue, exists := valuesMap.Get(epp.Props.Name)
-	if !exists {
-		return ""
-	}
-
-	// Convert to string (all query params should be strings)
-	if strValue, ok := rawValue.(string); ok {
-		return strValue
-	}
-
-	return ""
-}
+//// getParameterQueryValue retrieves a parameter value from the unified valuesMap.
+//// The valuesMap now contains ALL parameters (path, template query, and Params-defined query).
+//// Returns the first value if the parameter exists, empty string otherwise.
+//func (ep *Endpoint) getParameterQueryValue(epp EndpointParam, valuesMap pvtypes.ValuesMap) (value string) {
+//	var rawValue any
+//	var strValue string
+//	var ok bool
+//
+//	// Skip path params - already validated by Router.Match()
+//	if epp.Location == pathvars.PathLocation {
+//		goto end
+//	}
+//
+//	// Skip body params - handled separately by GetParameterValues
+//	if epp.Location != pathvars.QueryLocation {
+//		goto end
+//	}
+//
+//	// Get value from unified valuesMap (contains path + template query + Params-defined query)
+//	// All query params are now stored as strings (first value from HTTP query)
+//	rawValue, ok = valuesMap.Get(epp.Name)
+//	if !ok {
+//		goto end
+//	}
+//
+//	// Convert to string (all query params should be strings)
+//	strValue, ok = rawValue.(string)
+//	if ok {
+//		value = strValue
+//		goto end
+//	}
+//end:
+//	return value
+//}
 
 // ValidateQueryParameters validates ALL HTTP query parameters defined in ep.Params against
 // the actual HTTP request query string. This is separate from SQL parameter extraction.
@@ -320,7 +323,7 @@ func (ep *Endpoint) ValidateQueryParameters(matchResult pathvars.MatchResult) (e
 	pathParamNames := make(map[pathvars.Identifier]bool)
 	for _, epParam := range ep.Params {
 		if epParam.Location == pathvars.PathLocation {
-			pathParamNames[epParam.Props.Name] = true
+			pathParamNames[epParam.Name] = true
 		}
 	}
 
@@ -347,7 +350,7 @@ func (ep *Endpoint) ValidateQueryParameters(matchResult pathvars.MatchResult) (e
 		}
 
 		// Get the value directly from parsedQuery (HTTP request query string)
-		paramName := string(epParam.Props.Name)
+		paramName := string(epParam.Name)
 		values, found := parsedQuery.Get(paramName)
 		if !found || len(values) == 0 {
 			// Parameter not provided in HTTP request - skip validation
@@ -359,7 +362,7 @@ func (ep *Endpoint) ValidateQueryParameters(matchResult pathvars.MatchResult) (e
 		// Convert EndpointParam to pathvars.Parameter for validation
 		paramType := epParam.Type
 		if paramType == pathvars.UnspecifiedDataType {
-			paramType, _ = pathvars.ParseParameterDataType(string(epParam.Props.Name), string(epParam.Type.Slug()))
+			paramType, _ = pathvars.ParseParameterDataType(string(epParam.Name), string(epParam.Type.Slug()))
 		}
 
 		param := pathvars.NewParameter(pathvars.ParameterArgs{
@@ -435,7 +438,7 @@ func (ep *Endpoint) ParsePathVarParameters() (params []pathvars.Parameter, err e
 			Original:    p.RawValue(),
 		}))
 	}
-	return params, err
+	return params, CombineErrs(errs)
 }
 
 //// GetQuery returns the SQL query for this endpoint, loading from a file if necessary.

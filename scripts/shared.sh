@@ -1,18 +1,44 @@
-#!/bin/bash
-#
-# Common variables for xmlui-test-server build scripts
-#
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# Project settings
-BIN_DIR="bin"
-BINARY_NAME="xmlui-test-server"
-BINARY_PATH="$BIN_DIR/$BINARY_NAME"
+# Shared defaults; override via env if needed.
+BIN="${BIN:-xmlui-test-server}"
+BIN_DIR="${BIN_DIR:-bin}"
+CMD_DIR="${CMD_DIR:-cmd}"
+PKG_DIR="${PKG_DIR:-xmluisvr}"
+ITEST_DIR="${ITEST_DIR:-test}"
+
+GO="${GO:-go}"
+CGO="${CGO:-1}"   # sqlite3 requires CGO
+RACE="${RACE:-1}"
+GOEXPERIMENT="${GOEXPERIMENT:-jsonv2}"
+
+# Legacy aliases for backwards compatibility
+BINARY_NAME="${BIN}"
+BINARY_PATH="${BIN_DIR}/${BIN}"
 GO_SQLITE3_PATH="xmluisvr/sqlite3"
+
+# Version metadata (override in CI if desired)
+VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo v0.0.0-dev)}"
+COMMIT="${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo 0000000)}"
+DATE="${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+
+# ldflags; append extra with LDFLAGS_APPEND if needed
+LDFLAGS_BASE="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE} -X main.builtBy=make"
+LDFLAGS="${LDFLAGS:-${LDFLAGS_BASE} ${LDFLAGS_APPEND:-}}"
+
+LOCALBIN="${LOCALBIN:-${BIN_DIR}/${BIN}}"
 
 # SQLite settings
 SQLITE_VERSION="3450200"
 SQLITE_YEAR="2024"
 SQLITE_CFLAGS="-DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_ALLOW_LOAD_EXTENSION"
+
+# CGO linker flags
+# Suppress LC_DYSYMTAB warnings on macOS (see: https://github.com/golang/go/issues/61229)
+# This is a known cosmetic warning with Apple's ld-prime linker in Xcode 15+
+# Will be fixed in Go 1.26 (https://github.com/golang/go/issues/75274)
+CGO_LDFLAGS="${CGO_LDFLAGS:--Xlinker -w}"
 
 # Extension settings
 EXTENSION_VERSION="v1.2.0"
@@ -81,6 +107,15 @@ check_patched_sqlite3() {
     if [[ ! -d "$GO_SQLITE3_PATH" ]]; then
         error "Patched go-sqlite3 not found at $GO_SQLITE3_PATH"
     fi
+}
+
+# Discover all module roots (dirs containing go.mod), ignoring vendor/.git/bin/build
+get_module_dirs() {
+  find . -type f -name go.mod -print0 \
+  | xargs -0 -n1 dirname \
+  | sed 's#^\./##' \
+  | grep -Ev '(^|/)(vendor|\.git|'"${BIN_DIR:-bin}"'|'"${BUILD_DIR:-build}"')(/|$)' \
+  | sort -u
 }
 
 # Test directory discovery

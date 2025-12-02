@@ -7,8 +7,6 @@ import (
 	"github.com/mikeschinkel/go-rfc9457"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 var _ ResponsePayload = (*QueryResult)(nil)
@@ -27,6 +25,7 @@ func (qr QueryResult) GetByCardinality(c sqlparams.Cardinality) (content any, er
 			err = dbpkg.ErrManyRowsExpectedZeroReturned
 			goto end
 		}
+		content = qr
 
 	case sqlparams.OneRowOrNone:
 		if len(qr) == 0 {
@@ -56,7 +55,7 @@ end:
 	if err != nil {
 		err = WithErr(err, dbpkg.ErrInvalidCardinality)
 	}
-	return qr, err
+	return content, err
 }
 
 func NewQueryResult(qr dbpkg.QueryResult) QueryResult {

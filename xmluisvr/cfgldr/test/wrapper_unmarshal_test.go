@@ -1,4 +1,4 @@
-package cfgldr_test
+package test
 
 import (
 	"os"

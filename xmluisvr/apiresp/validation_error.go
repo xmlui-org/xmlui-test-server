@@ -8,6 +8,9 @@ type ValidationError struct {
 	Message   string       `json:"message"`
 }
 
+// NewValidationError encapsulates instantiation of a new ValidationError non-pointer value
+//
+//nolint:staticcheck // S1016: Keep Args/Error types separate to allow independent evolution
 func NewValidationError(args ValidationErrorArgs) ValidationError {
 	return ValidationError{
 		Parameter: args.Parameter,
@@ -19,9 +22,9 @@ func NewValidationError(args ValidationErrorArgs) ValidationError {
 }
 
 type ValidationErrorArgs struct {
-	Parameter string       `json:"parameter"`
-	Location  LocationType `json:"location"`
-	Expected  string       `json:"expected"`
-	Received  string       `json:"received"`
-	Message   string       `json:"message"`
+	Parameter string
+	Location  LocationType
+	Expected  string
+	Received  string
+	Message   string
 }

@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mikeschinkel/go-rfc9457"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 type PayloadResult struct {

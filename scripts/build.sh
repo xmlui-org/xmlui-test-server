@@ -19,7 +19,7 @@ main() {
     rm -f "$BINARY_PATH"
     
     # Build the binary from cmd directory
-    GOEXPERIMENT=jsonv2 go build -v -o "$BINARY_PATH" ./cmd
+    CGO_LDFLAGS="${CGO_LDFLAGS}" GOEXPERIMENT=jsonv2 go build -v -o "$BINARY_PATH" ./cmd
     
     log "Build complete! Binary: $BINARY_PATH"
 }

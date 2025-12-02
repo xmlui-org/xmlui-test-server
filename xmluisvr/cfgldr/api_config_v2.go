@@ -12,8 +12,6 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 const (
@@ -154,7 +152,7 @@ func LoadAPIConfigV2(apiFile dt.Filepath) (c *APIConfigV2, err error) {
 		goto end
 	}
 	data, err = apiFile.ReadFile()
-	if errors.Is(os.ErrNotExist, err) {
+	if errors.Is(err, os.ErrNotExist) {
 		err = fmt.Errorf("invalid APIConfig description file: %w", err)
 		goto end
 	}

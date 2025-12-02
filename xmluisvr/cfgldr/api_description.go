@@ -5,14 +5,11 @@ import (
 	jsonv2 "encoding/json/v2"
 	"errors"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 type Context = context.Context
@@ -26,7 +23,7 @@ type APIDescription struct {
 	Description string               `json:"description"`
 	BasePath    string               `json:"basePath"`
 	Endpoints   []EndpointDefinition `json:"endpoints"`
-	pathRegexps map[string]*regexp.Regexp
+	//pathRegexps map[string]*regexp.Regexp
 }
 
 func (d *APIDescription) Migrate() *APIConfigV2 {
@@ -89,11 +86,11 @@ type MethodDefinition struct {
 func LoadAPIDescriptionFromFile(file dt.Filepath) (d *APIDescription, err error) {
 	var data []byte
 	data, err = file.ReadFile()
-	if errors.Is(os.ErrNotExist, err) {
+	if errors.Is(err, os.ErrNotExist) {
 		goto end
 	}
 	if err != nil {
-		err = NewErr(ErrReadFailed, err)
+		err = NewErr(err, ErrReadFailed)
 		goto end
 	}
 	d = &APIDescription{}

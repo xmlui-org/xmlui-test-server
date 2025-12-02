@@ -6,8 +6,6 @@ import (
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 type APIConfig interface {
@@ -50,7 +48,6 @@ func LoadAPIFileIfExists(apiFile dt.Filepath) (api APIConfig, err error) {
 		err = dtx.EntryStatusError(status)
 		goto end
 	}
-	err = nil
 	apiV2, err = LoadAPIConfigV2(apiFile)
 	if err != nil {
 		err = NewErr(

@@ -13,8 +13,6 @@ import (
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
-
-	. "github.com/mikeschinkel/go-doterr"
 )
 
 // APIEndpointV2 is the main endpoint struct using JSONV2 inline to flatten the JSON

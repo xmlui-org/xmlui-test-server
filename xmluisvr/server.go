@@ -86,7 +86,7 @@ func (svr *Server) Initialize(ctx Context) (err error) {
 	}
 
 	// Add URL routes
-	svr.addRoutes(ctx)
+	svr.addRoutes()
 
 	err = svr.Database.Open(ctx)
 	if err != nil {
@@ -141,7 +141,7 @@ func (svr *Server) Port() common.ServerPort {
 //   - Proxy endpoint (/proxy/)
 //   - Query endpoint (/query)
 //   - Static file serving (/)
-func (svr *Server) addRoutes(ctx Context) {
+func (svr *Server) addRoutes() {
 	svr.V2().InfoPrint("Adding HTTP server routes")
 	// Handle APIConfig routes first (to match /apiFile/* before static files)
 	if svr.API != nil {
@@ -157,7 +157,7 @@ func (svr *Server) addRoutes(ctx Context) {
 	// Handle proxy next
 	svr.V3().Printf("  — ANY  /proxy/\n")
 	for _, method := range common.HTTPMethods {
-		svr.Mux.HandleFunc(fmt.Sprintf("%s /proxy/", method), svr.handleProxyFunc(method))
+		svr.Mux.HandleFunc(fmt.Sprintf("%s /proxy/", method), svr.handleProxyFunc())
 	}
 
 	// Health check endpoint (bypasses API routing for test readiness checks)
@@ -176,4 +176,18 @@ func (svr *Server) addRoutes(ctx Context) {
 
 	svr.V3().InfoPrint("HTTP server routes added")
 
+}
+
+// writeErrorf allows calling svr.Writer.Errorf() where it is obvious that this
+// is writing to the stdio without the linter complaining that I can remove
+// .Writer if called directly.
+func (svr *Server) writeErrorf(format string, args ...any) {
+	svr.Errorf(format, args...)
+}
+
+// logError allows calling svr.Logger.Error() where it is obvious that this
+// is writing to the stdio without the linter complaining that I can remove
+// .Writer if called directly.
+func (svr *Server) logError(msg string, attrs ...any) {
+	svr.Error(msg, attrs...)
 }

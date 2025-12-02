@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -175,17 +176,9 @@ func TestAPIHTTPErrorsEdgeCases(t *testing.T) {
 		// - Return 200 with Allow header
 		// - Return 204 No Content
 		// - Return 405 if not supported
-		if resp.StatusCode != 200 && resp.StatusCode != 204 && resp.StatusCode != 405 {
-			// t.Logf("OPTIONS returned status %d. Body: %s", resp.StatusCode, string(body))
-		}
-
-		// Check for CORS headers if OPTIONS is supported
-		if resp.StatusCode == 200 || resp.StatusCode == 204 {
-			allowOrigin := resp.Header.Get("Access-Control-Allow-Origin")
-			if allowOrigin != "" {
-				// t.Logf("CORS enabled: Access-Control-Allow-Origin: %s", allowOrigin)
-			}
-		}
+		// Note: OPTIONS method may return 200, 204, or 405 depending on implementation
+		// CORS headers (Access-Control-Allow-Origin, etc.) are optional but commonly present
+		// This test only verifies that OPTIONS is handled without errors
 	})
 
 	t.Run("head_method_handling", func(t *testing.T) {
@@ -199,14 +192,15 @@ func TestAPIHTTPErrorsEdgeCases(t *testing.T) {
 		// HEAD should either:
 		// - Return 200 with no body (same headers as GET)
 		// - Return 405 if not supported
-		if resp.StatusCode == 200 {
+		switch resp.StatusCode {
+		case http.StatusOK:
 			if len(body) > 0 {
 				t.Errorf("HEAD request should have empty body, got: %s", string(body))
 			}
 			// t.Log("HEAD method is supported")
-		} else if resp.StatusCode == 405 {
+		case http.StatusMethodNotAllowed:
 			// t.Log("HEAD method not supported (returns 405)")
-		} else {
+		default:
 			// t.Logf("HEAD returned unexpected status %d", resp.StatusCode)
 		}
 	})
@@ -252,18 +246,16 @@ func TestAPIHTTPErrorsEdgeCases(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.description, func(t *testing.T) {
-				//resp, body, err := makeHTTPRequest(server.BaseURL, "GET", tc.path, "")
-				resp, _, err := makeHTTPRequest(server.BaseURL, "GET", tc.path, "")
+				resp, body, err := makeHTTPRequest(server.BaseURL, "GET", tc.path, "")
 				if err != nil {
 					t.Fatalf("HTTP request failed: %v", err)
 				}
 				defer closeOrError(t, resp.Body)
 
-				// Document the behavior - both should ideally return same result
-				// t.Logf("Path %s returned status %d", tc.path, resp.StatusCode)
-
+				// Paths should return either 200 (success) or 404 (not found)
 				if resp.StatusCode != 200 && resp.StatusCode != 404 {
-					// t.Logf("Unexpected status %d for %s. Body: %s", resp.StatusCode, tc.path, string(body))
+					t.Errorf("Expected status 200 or 404 for path %s, got %d. Body: %s",
+						tc.path, resp.StatusCode, string(body))
 				}
 			})
 		}

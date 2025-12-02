@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/mikeschinkel/go-cfgstore"
-	. "github.com/mikeschinkel/go-doterr"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/appinfo"
 	"github.com/mikeschinkel/go-dt/dtx"
@@ -232,10 +231,6 @@ func LoadRootConfigV1(args LoadRootConfigV1Args) (_ *RootConfigV1, err error) {
 				DirsProvider: args.DirsProvider,
 			},
 		})
-	}
-
-	lrc = &RootConfigV1Wrapper{
-		RootConfigV1: RootConfigV1{},
 	}
 
 	// Get externally set options such as via the switches on the command line

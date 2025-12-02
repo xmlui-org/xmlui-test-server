@@ -1,4 +1,4 @@
-package cfgldr_test
+package test
 
 import (
 	"encoding/json/jsontext"
@@ -47,18 +47,13 @@ func TestCreateGoldenData(t *testing.T) {
 	}
 }
 func TestLoadRootConfigV1(t *testing.T) {
-	type args struct {
-		appName string
-	}
 	tests := []struct {
 		name    string
-		args    args
 		want    map[string]any
 		wantErr bool
 	}{
 		{
 			name: "LoadJSON Config",
-			args: args{},
 			want: map[string]any{
 				"$schema":                                   "https://xmlui.org/schemas/v1/localsvr/root-schema.json",
 				"version":                                   1,
