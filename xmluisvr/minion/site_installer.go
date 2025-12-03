@@ -104,7 +104,7 @@ func (si *SiteInstaller) Install() (result *InstallResult, err error) {
 		goto end
 	}
 	if exists && !si.Overwrite {
-		err = fmt.Errorf("demo '%s' already exists at %s\nUse --force to overwrite", si.Manifest.Slug, installDir)
+		err = fmt.Errorf("demo '%s' already exists at %s\nUse --overwrite to download again", si.Manifest.Slug, installDir)
 		goto end
 	}
 
