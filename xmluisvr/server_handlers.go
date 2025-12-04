@@ -49,13 +49,13 @@ func (svr *Server) handleHealthCheckFunc() http.HandlerFunc {
 }
 
 func (svr *Server) serveFile(w http.ResponseWriter, r *http.Request, ep dt.EntryPath) {
-	svr.Printf("Trying to serve: %s\n", ep)
 	if ep == "" {
 		svr.writeErrorf("No file to load\n")
 		// TODO: Change this to a 500 error when we have time
 		http.NotFound(w, r)
 	}
 	ep = dt.EntryPathJoin(svr.API.Webroot, ep)
+	svr.Printf("Trying to serve: %s\n", common.HomeRelative(string(ep)))
 	status, err := ep.Status()
 	if err != nil {
 		goto end
@@ -340,7 +340,7 @@ func (svr *Server) createProxy(args apipkg.HandlerHelperArgs) (proxy *httputil.R
 
 	// Build a Director that *only* mutates the outbound request.
 	proxy.Director = svr.proxyDirectorFunc(proxy.Director, proxy, args.HTTPRequest, args)
-	// Give yourself visibility vs “mystery crash”
+	// Give yourself visibility vs "mystery crash"
 	proxy.ErrorHandler = svr.proxyErrorHandlerFunc(args.TargetURL)
 
 	// (Optional) Hardened Transport (timeouts, no HTTP/2 if you suspect issues, etc.)

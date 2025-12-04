@@ -6,7 +6,6 @@ import (
 
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
 )
@@ -27,11 +26,6 @@ func (d *DuckDB) GetFormatParamFunc() dbpkg.FormatParamFunc {
 	return func(index int) string {
 		return fmt.Sprintf("$%d", index)
 	}
-}
-
-func (d *DuckDB) CreateNewFromConfig(config cfgldr.DatabaseConfig) (dbpkg.Database, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (d *DuckDB) SetBaseDatabase(db *dbpkg.BaseDatabase) {

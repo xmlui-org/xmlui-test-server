@@ -17,7 +17,7 @@ endef
 help:    ## Show this help message
 	$(call run,help)
 
-ensure-valid: tidy test lint vet
+ensure-valid: tidy test lint vet build
 
 deps:    ## Download & tidy modules
 	$(call run,deps)

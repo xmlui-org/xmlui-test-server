@@ -8,6 +8,7 @@ import (
 
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
+	"github.com/mikeschinkel/go-logutil"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 )
@@ -26,9 +27,14 @@ import (
 //   - 4: Known runtime error
 //   - 5: Unknown runtime error
 func RunCLI(cfgOpts *cfgldr.Options) {
-	var err error
 	var wl cliutil.WriterLogger
 	var runArgs *RunArgs
+
+	err := cfgldr.Initialize()
+	if err != nil {
+		cliutil.Stderrf("Failed to initialize config loader: %v\n", err)
+		os.Exit(cliutil.ExitConfigLoadError)
+	}
 
 	if cfgOpts == nil {
 		cfgOpts, err = cfgldr.GetOptions()
@@ -56,7 +62,7 @@ func RunCLI(cfgOpts *cfgldr.Options) {
 
 	runArgs, err = ParseRunArgs(ctx, cfgOpts, runArgs)
 	if err != nil {
-		wl = cliutil.NewWriterLogger(writer, nil)
+		wl = cliutil.NewWriterLogger(writer, logutil.CreateStderrTextLogger())
 		_ = wl.ErrorError("Failed to parse run arguments", "error", err)
 		os.Exit(cliutil.ExitConfigParseError)
 	}

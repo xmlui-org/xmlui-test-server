@@ -22,6 +22,36 @@ type RunArgs struct {
 	DirsProvider *cfgstore.DirsProvider // Optional custom directory provider for config loading
 }
 
+func ensureDirsProvider(dp *cfgstore.DirsProvider) (_ *cfgstore.DirsProvider) {
+	// Determine log file location using DirsProvider
+	if dp != nil {
+		goto end
+	}
+	dp = cfgstore.DefaultDirsProvider()
+end:
+	return dp
+}
+func getProjectDir(dp *cfgstore.DirsProvider) (projectDir dt.DirPath, err error) {
+	// Determine log file location using DirsProvider
+	if dp != nil {
+		// Use custom project directory (e.g., demo install dir)
+		projectDir, err = dp.ProjectDirFunc()
+	}
+	if err != nil {
+		goto end
+	}
+	if projectDir != "" {
+		goto end
+	}
+	// Use current working directory
+	projectDir, err = dt.Getwd()
+	if err != nil {
+		goto end
+	}
+end:
+	return projectDir, err
+}
+
 // ParseRunArgs creates a complete RunArgs from a partial RunArgs and cfgldr.Options.
 // This function extracts the RunArgs construction logic from RunCLI
 // so it can be reused by commands that need to call Run() directly.
@@ -44,20 +74,12 @@ func ParseRunArgs(ctx context.Context, cfgOpts *cfgldr.Options, args *RunArgs) (
 
 	writer := args.Config.Writer
 
-	// Determine log file location using DirsProvider
-	if args.DirsProvider != nil {
-		// Use custom project directory (e.g., demo install dir)
-		projectDir, err = args.DirsProvider.ProjectDirFunc()
-		if err != nil {
-			goto end
-		}
-	} else {
-		// Use current working directory
-		projectDir, err = dt.Getwd()
-		if err != nil {
-			goto end
-		}
+	projectDir, err = getProjectDir(args.DirsProvider)
+	if err != nil {
+		goto end
 	}
+
+	args.DirsProvider = ensureDirsProvider(args.DirsProvider)
 
 	// Create log file path: <projectDir>/<logPath>/<logFile>
 	// e.g., ~/.config/xmlui/demos/invoice/logs/xmlui-localsvr.log
@@ -87,7 +109,7 @@ func ParseRunArgs(ctx context.Context, cfgOpts *cfgldr.Options, args *RunArgs) (
 		goto end
 	}
 
-	//cfg.ServerConfig.APIConfig.Webroot = cfgOpts.Webroot
+	cfg.ServerConfig.APIConfig.Webroot = cfgOpts.Webroot
 
 	// Parse configuration
 	config, err = ParseConfig(ctx, cfg, ParseConfigArgs{

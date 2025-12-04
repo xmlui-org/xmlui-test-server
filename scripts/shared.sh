@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # Shared defaults; override via env if needed.
-BIN="${BIN:-xmlui-test-server}"
+BIN="${BIN:-xmlui-localsvr}"
 BIN_DIR="${BIN_DIR:-bin}"
 CMD_DIR="${CMD_DIR:-cmd}"
 PKG_DIR="${PKG_DIR:-xmluisvr}"

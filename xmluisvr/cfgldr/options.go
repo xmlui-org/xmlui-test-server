@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/mikeschinkel/go-cliutil"
+	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 )
@@ -97,6 +98,12 @@ func NewOptions(args OptionsArgs) *Options {
 		opts.Webroot = *args.Webroot
 	} else {
 		opts.Webroot = common.DefaultWebroot
+	}
+	if len(opts.Webroot) == 0 {
+		print()
+	}
+	if len(opts.Webroot) >= 1 && opts.Webroot[0] == '.' {
+		opts.Webroot = string(dt.DirPathJoin(workingDir, opts.Webroot))
 	}
 	if args.ConnectString != nil {
 		opts.ConnectString = *args.ConnectString

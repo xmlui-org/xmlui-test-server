@@ -1,6 +1,7 @@
 .DS_Store
-/bin
-/bin/**
+bin
+bin/**
+xmluisvr-cli
 
 *.log
 
@@ -12,3 +13,4 @@
 
 go.work
 go.work.sum
+
