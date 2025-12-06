@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	testutil "github.com/mikeschinkel/go-testutil"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 const testDataDir = "./test-data"
@@ -14,7 +14,7 @@ const testDataDir = "./test-data"
 func TestMain(m *testing.M) {
 
 	logger := testutil.NewNullLogger()
-	common.SetLogger(logger) // TODO Change to a buffered logger
+	localsvr.SetLogger(logger) // TODO Change to a buffered logger
 
 	// Run tests
 	code := m.Run()

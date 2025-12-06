@@ -51,8 +51,8 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-pathvars"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // API represents a configured API instance with endpoints, routing, and metadata.
@@ -61,23 +61,23 @@ type API struct {
 	Name                 string           // Human-readable name for the API
 	Webroot              dt.DirPath       // Root directory for static file serving // TODO: Move this to Server 🤦‍♂️
 	SourceFile           dt.Filepath      // Path to the configuration file
-	BasePath             common.URLPath   // Common URL prefix for all endpoints
+	BasePath             localsvr.URLPath // Common URL prefix for all endpoints
 	Endpoints            []*Endpoint      // List of configured API endpoints
 	Verbose              bool             // Enable verbose logging
 	Router               *pathvars.Router // URL routing and path parameter extraction
-	Options              *common.Options
+	Options              *localsvr.Options
 	initialized          bool // Whether Initialize() has been called
 	cliutil.WriterLogger      // Embedded logging functionality
 }
 
 // APIArgs contains the configuration needed to create a new API instance.
 type APIArgs struct {
-	Name       string         // API name
-	Webroot    dt.DirPath     // Static file root directory
-	SourceFile dt.Filepath    // Configuration file path
-	BasePath   common.URLPath // URL prefix for endpoints
-	Endpoints  []*Endpoint    // Parsed endpoint configurations
-	Options    *common.Options
+	Name       string           // API name
+	Webroot    dt.DirPath       // Static file root directory
+	SourceFile dt.Filepath      // Configuration file path
+	BasePath   localsvr.URLPath // URL prefix for endpoints
+	Endpoints  []*Endpoint      // Parsed endpoint configurations
+	Options    *localsvr.Options
 	CLIWriter  cliutil.Writer // CLI output writer
 	Logger     *slog.Logger   // Structured logger
 }
@@ -86,7 +86,7 @@ type APIArgs struct {
 type CreateAPIArgs struct {
 	Database  dbpkg.Database
 	APIConfig cfgldr.APIConfig // Loaded API configuration
-	Options   *common.Options
+	Options   *localsvr.Options
 	Writer    cliutil.Writer // CLI writer for output
 	Logger    *slog.Logger   // Logger instance
 }
@@ -95,7 +95,7 @@ type CreateAPIArgs struct {
 // It parses the configuration, validates settings, and creates endpoints.
 // Currently only supports APIConfigV2 format.
 func CreateAPI(args CreateAPIArgs) (api *API, err error) {
-	var basePath common.URLPath
+	var basePath localsvr.URLPath
 	var sourceFile dt.Filepath
 	var webroot dt.DirPath
 	var endpoints []*Endpoint
@@ -106,7 +106,7 @@ func CreateAPI(args CreateAPIArgs) (api *API, err error) {
 	if !ok {
 		panic(fmt.Sprintf("Cannot type assert APIConfig config value of type %T to type %T", cfg, (*cfgldr.APIConfigV2)(nil)))
 	}
-	basePath, err = common.ParseURLPath(cfgV2.BasePath)
+	basePath, err = localsvr.ParseURLPath(cfgV2.BasePath)
 	if err != nil {
 		goto end
 	}
@@ -118,7 +118,7 @@ func CreateAPI(args CreateAPIArgs) (api *API, err error) {
 	if err != nil {
 		goto end
 	}
-	webroot, err = common.ParseDirPath(cfgV2.Webroot)
+	webroot, err = localsvr.ParseDirPath(cfgV2.Webroot)
 	if err != nil {
 		goto end
 	}
@@ -194,10 +194,10 @@ func (api *API) initializeRouter() (err error) {
 	return err
 }
 
-//// extractBodyJSON extracts JSON from the request body into a common.JSONBytes
+//// extractBodyJSON extracts JSON from the request body into a localsvr.JSONBytes
 //// variable. It uses a TeeReader to preserve the request body for potential
 //// future use. On error it returns nil result and a populated error.
-//func extractBodyJSON(r *http.Request) (json common.JSONBytes, err error) {
+//func extractBodyJSON(r *http.Request) (json localsvr.JSONBytes, err error) {
 //	var buffer bytes.Buffer
 //	var jsonBytes []byte
 //	if r.Body == nil {

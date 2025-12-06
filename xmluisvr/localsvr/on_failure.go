@@ -1,4 +1,4 @@
-package common
+package localsvr
 
 type OnFailure string
 

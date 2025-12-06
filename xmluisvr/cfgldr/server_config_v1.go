@@ -2,7 +2,7 @@ package cfgldr
 
 import (
 	"github.com/mikeschinkel/go-cfgstore"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 const (
@@ -54,10 +54,10 @@ func (c *ServerConfigV1) Normalize(args cfgstore.NormalizeArgs) (err error) {
 	c.Version = ServerConfigV1Version
 	c.SourceFile = string(args.SourceFile)
 	if c.Host == "" {
-		c.Host = common.DefaultServerHost
+		c.Host = localsvr.DefaultServerHost
 	}
 	if c.Port == 0 {
-		c.Port = common.DefaultServerPort
+		c.Port = localsvr.DefaultServerPort
 	}
 	err = c.APIConfig.Normalize(args)
 	return err

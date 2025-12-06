@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package common provides a tiny, stdlib-only way to attach structured metadata
+// Package localsvr provides a tiny, stdlib-only way to attach structured metadata
 // and sentinels to errors while staying fully composable with the Go standard
 // library. The model is:
 //
@@ -37,7 +37,7 @@
 //
 //   - Combine([]error) bundles independent failures into a single error that unwraps
 //     to its members, preserving order.
-package common
+package localsvr
 
 import (
 	"errors"

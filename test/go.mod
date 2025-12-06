@@ -3,15 +3,15 @@ module test
 go 1.25.3
 
 require (
-	github.com/mikeschinkel/go-cfgstore v0.3.0
-	github.com/mikeschinkel/go-cliutil v0.2.1
-	github.com/mikeschinkel/go-dt v0.3.1
+	github.com/mikeschinkel/go-cfgstore v0.4.0
+	github.com/mikeschinkel/go-cliutil v0.3.0
+	github.com/mikeschinkel/go-dt v0.3.3
 	github.com/mikeschinkel/go-dt/appinfo v0.2.1
 	github.com/mikeschinkel/go-fsfix v0.2.2
 	github.com/mikeschinkel/go-rfc9457 v0.1.1
 	github.com/mikeschinkel/go-sqlparams v0.1.2
 	github.com/mikeschinkel/go-testutil v0.2.1
-	github.com/xmlui-org/xmlui-test-server/xmluisvr v0.4.1
+	github.com/xmlui-org/xmlui-test-server/xmluisvr v0.5.0
 )
 
 require (

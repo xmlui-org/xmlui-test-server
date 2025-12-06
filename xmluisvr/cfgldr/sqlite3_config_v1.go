@@ -8,7 +8,7 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 const (
@@ -203,7 +203,7 @@ end:
 }
 
 func (c *SQLite3ConfigV1) normalizeConnectString(opts *Options) (err error) {
-	cs := opts.appendToWebroot(opts.ConnectString, common.DefaultSQLite3Database)
+	cs := opts.appendToWebroot(opts.ConnectString, localsvr.DefaultSQLite3Database)
 	c.SetConnectString(cs)
 	return err
 }
@@ -332,16 +332,16 @@ func (c *SQLite3ExtensionConfigV1) Normalize(args cfgstore.NormalizeArgs) (err e
 		c.Name = c.Id
 	}
 	if c.Version == "" {
-		c.Version = common.UnknownVersion
+		c.Version = localsvr.UnknownVersion
 	}
 	if c.EntryPoint == "" {
-		c.EntryPoint = common.DefaultSQLite3ExtensionEntryPoint
+		c.EntryPoint = localsvr.DefaultSQLite3ExtensionEntryPoint
 	}
 	if c.OnFailure == "" {
-		c.OnFailure = common.DefaultOnFailurePolicy
+		c.OnFailure = localsvr.DefaultOnFailurePolicy
 	}
 	if c.VarScope == "" {
-		c.VarScope = common.DefaultVarScope
+		c.VarScope = localsvr.DefaultVarScope
 	}
 	if c.DownloadURLs == nil {
 		c.DownloadURLs = make([]string, 0)

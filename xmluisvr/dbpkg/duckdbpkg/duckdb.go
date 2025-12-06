@@ -6,8 +6,8 @@ import (
 
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 func init() {
@@ -50,7 +50,7 @@ func (d *DuckDB) TypeName() string {
 	return "DuckDB"
 }
 
-func (d *DuckDB) ValidatedConnection(ctx dbpkg.Context, dbType dbpkg.DatabaseType, connStr common.ConnectString) (err error) {
+func (d *DuckDB) ValidatedConnection(ctx dbpkg.Context, dbType dbpkg.DatabaseType, connStr localsvr.ConnectString) (err error) {
 	var fp dt.Filepath
 	fp, err = dt.ParseFilepath(string(connStr))
 	if err != nil {
@@ -62,9 +62,9 @@ end:
 }
 
 // ParseConnectString injects or overrides the port in a DuckDB connection string (URL or DSN format)
-func (d *DuckDB) ParseConnectString(cs string) (_ common.ConnectString, err error) {
+func (d *DuckDB) ParseConnectString(cs string) (_ localsvr.ConnectString, err error) {
 	// TODO Add validation
-	return common.ConnectString(cs), err
+	return localsvr.ConnectString(cs), err
 }
 
 func (*DuckDB) Type() dbpkg.DatabaseType {

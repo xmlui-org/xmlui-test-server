@@ -12,7 +12,7 @@ import (
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 const (
@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	DefaultErrorStyle = string(common.DefaultErrorStyle)
+	DefaultErrorStyle = string(localsvr.DefaultErrorStyle)
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	DefaultConnectString = common.DefaultSQLite3Database
+	DefaultConnectString = localsvr.DefaultSQLite3Database
 )
 
 type Options struct {
@@ -97,7 +97,7 @@ func NewOptions(args OptionsArgs) *Options {
 	if args.Webroot != nil {
 		opts.Webroot = *args.Webroot
 	} else {
-		opts.Webroot = common.DefaultWebroot
+		opts.Webroot = localsvr.DefaultWebroot
 	}
 	if len(opts.Webroot) == 0 {
 		print()
@@ -175,11 +175,11 @@ func NewOptionsFlagSet(name string) *OptionsFlagSet {
 
 	ofs.fs.IntVar(ofs.timeout, "timeout", DefaultTimeout, "Timeout(in seconds) (TODO explain what this controls)")
 
-	ofs.fs.StringVar(ofs.webroot, "webroot", common.DefaultWebroot, "Directory to serve from")
+	ofs.fs.StringVar(ofs.webroot, "webroot", localsvr.DefaultWebroot, "Directory to serve from")
 	ofs.fs.StringVar(ofs.apiFile, "api", DefaultAPIFile, "Path to API description file")
 	ofs.fs.StringVar(ofs.connStr, "db", DefaultConnectString, "Path to SQLite database file or PostgreSQL connection string or DB description file")
-	ofs.fs.StringVar(ofs.dbBootstrapFile, "db-bootstrap", common.DefaultDBBootstrapFilepath,
-		fmt.Sprintf("Path to database query file containing idempotent queries to run on start of server (default %s)", common.DefaultDBBootstrapFilepath),
+	ofs.fs.StringVar(ofs.dbBootstrapFile, "db-bootstrap", localsvr.DefaultDBBootstrapFilepath,
+		fmt.Sprintf("Path to database query file containing idempotent queries to run on start of server (default %s)", localsvr.DefaultDBBootstrapFilepath),
 	)
 	ofs.fs.IntVar(ofs.dbPort, "db-port", 0, "PostgreSQL port (optional, overrides port in --db if provided)")
 	ofs.fs.Var(&ofs.dbExtensions, "db-ext", "One or more paths to database extensions to load (currently only SQLite3.)")

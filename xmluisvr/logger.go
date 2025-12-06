@@ -3,7 +3,7 @@ package xmluisvr
 import (
 	"log/slog"
 
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // logger is the package-level logger instance.
@@ -12,7 +12,7 @@ import (
 var logger *slog.Logger
 
 func init() {
-	common.RegisterSetLoggerFunc(func(l *slog.Logger) {
+	localsvr.RegisterSetLoggerFunc(func(l *slog.Logger) {
 		logger = l
 	})
 }

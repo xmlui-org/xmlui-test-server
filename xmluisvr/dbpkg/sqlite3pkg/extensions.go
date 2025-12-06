@@ -7,8 +7,8 @@ import (
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/mikeschinkel/go-dt"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 type (
@@ -19,21 +19,21 @@ type (
 var _ dbpkg.DBExtension = (*Extension)(nil)
 
 type Extension struct {
-	id      common.ExtensionId
-	version common.Version
+	id      localsvr.ExtensionId
+	version localsvr.Version
 	name    string
-	//docsURL      common.FullURL
-	//repoURL      common.FullURL
-	downloadURLs []common.FullURL
+	//docsURL      localsvr.FullURL
+	//repoURL      localsvr.FullURL
+	downloadURLs []localsvr.FullURL
 	filePath     dt.Filepath // Absolute or relative filepath, defaults to well-known directory structure
-	loadOrder    common.LoadOrder
+	loadOrder    localsvr.LoadOrder
 	entryPoint   EntryPoint
 	dependsOn    []DependsOn
-	sha256s      map[common.OSArch]common.SHA256
-	onFailure    common.OnFailure
+	sha256s      map[localsvr.OSArch]localsvr.SHA256
+	onFailure    localsvr.OnFailure
 	preLoadSQL   []SQLQuery
 	postLoadSQL  []SQLQuery
-	envVars      common.EnvironmentVars
+	envVars      localsvr.EnvironmentVars
 	allowVTable  bool
 	varScope     EnvVarScope // load or app
 }
@@ -44,21 +44,21 @@ func NewExtension(filePath dt.Filepath, args ExtensionArgs) *Extension {
 	name := filepath.Base(string(filePath))
 	name = name[:len(name)-len(filepath.Ext(name))]
 	return &Extension{
-		id:           common.ExtensionId(name),
-		version:      common.UnknownVersion,
+		id:           localsvr.ExtensionId(name),
+		version:      localsvr.UnknownVersion,
 		name:         name,
-		downloadURLs: make([]common.FullURL, 0),
+		downloadURLs: make([]localsvr.FullURL, 0),
 		filePath:     filePath,
 		loadOrder:    0,
-		entryPoint:   common.DefaultSQLite3ExtensionEntryPoint,
+		entryPoint:   localsvr.DefaultSQLite3ExtensionEntryPoint,
 		dependsOn:    make([]DependsOn, 0),
-		sha256s:      make(map[common.OSArch]common.SHA256),
-		onFailure:    common.DefaultOnFailurePolicy,
+		sha256s:      make(map[localsvr.OSArch]localsvr.SHA256),
+		onFailure:    localsvr.DefaultOnFailurePolicy,
 		preLoadSQL:   make([]SQLQuery, 0),
 		postLoadSQL:  make([]SQLQuery, 0),
-		envVars:      make(common.EnvironmentVars),
+		envVars:      make(localsvr.EnvironmentVars),
 		allowVTable:  false,
-		varScope:     common.DefaultVarScope,
+		varScope:     localsvr.DefaultVarScope,
 	}
 }
 

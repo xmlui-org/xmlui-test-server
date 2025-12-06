@@ -2,7 +2,7 @@ package dbpkg
 
 import (
 	"github.com/mikeschinkel/go-dt"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 var ErrInvalidConnectString = dt.ErrInvalidConnectString
@@ -11,7 +11,7 @@ type DatabaseType string
 
 func ParseDatabaseType(ctx Context, connStr string) (dt DatabaseType, err error) {
 	var errs []error
-	var cs common.ConnectString
+	var cs localsvr.ConnectString
 	for dbType, db := range databaseMap {
 		cs, err = db.ParseConnectString(connStr)
 		if err != nil {

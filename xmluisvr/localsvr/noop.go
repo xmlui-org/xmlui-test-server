@@ -1,3 +1,3 @@
-package common
+package localsvr
 
 func Noop(...any) {}

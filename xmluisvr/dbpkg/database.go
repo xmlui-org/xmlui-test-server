@@ -14,7 +14,7 @@ import (
 	"github.com/mikeschinkel/go-pathvars"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 //type ConnectStyle string
@@ -42,8 +42,8 @@ type Database interface {
 	Open(Context) error
 	Close() error
 	Query(Context, string, ...any) (*sql.Rows, error)
-	ValidatedConnection(Context, DatabaseType, common.ConnectString) error
-	ParseConnectString(string) (common.ConnectString, error)
+	ValidatedConnection(Context, DatabaseType, localsvr.ConnectString) error
+	ParseConnectString(string) (localsvr.ConnectString, error)
 	ParseQueryString(query string) (sqlparams.QueryString, error)
 	QueryFileExt() string
 	ParseExtension(DBExtensionConfig) (DBExtension, error)
@@ -51,7 +51,7 @@ type Database interface {
 	Extensions() []DBExtension
 	LoadExtension(DBExtension) error
 	GetFormatParamFunc() FormatParamFunc
-	Options() common.Options
+	Options() localsvr.Options
 	ConvertValue(value any, dt sqlparams.DBDataType) any
 	fmt.Stringer
 }
@@ -63,7 +63,7 @@ type DatabaseArgs struct {
 	Extensions       []DBExtension
 	BootstrapQueries *MultipartQuery
 	OnOpenQueries    *MultipartQuery
-	Options          *common.Options
+	Options          *localsvr.Options
 	AccessMode       AccessMode
 	SourceFile       dt.Filepath
 	CLIWriter        CLIWriter
@@ -117,7 +117,7 @@ func ParseQueries(queries []string, args ParseQueriesArgs) (mpq *MultipartQuery,
 	elemCnt = len(queries)
 	for i, qs := range queries {
 		mpq.AddQuerySource(
-			NewQuerySource(i+1, i+1, common.QueryString(qs), args.ConfigSource),
+			NewQuerySource(i+1, i+1, localsvr.QueryString(qs), args.ConfigSource),
 		)
 	}
 
@@ -159,7 +159,7 @@ func ParseQueries(queries []string, args ParseQueriesArgs) (mpq *MultipartQuery,
 		NewQuerySource(
 			elemCnt+1,
 			elemCnt+lineCnt,
-			common.QueryString(fileQuery),
+			localsvr.QueryString(fileQuery),
 			fp,
 			//csFilepath,
 		),
@@ -169,7 +169,7 @@ end:
 }
 
 type ParseDatabaseArgs struct {
-	Options      *common.Options
+	Options      *localsvr.Options
 	Writer       CLIWriter
 	Logger       *slog.Logger
 	DirsProvider *cfgstore.DirsProvider

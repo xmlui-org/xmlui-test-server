@@ -13,7 +13,7 @@ import (
 	_ "github.com/mikeschinkel/go-jsontest/pipefuncs"
 	"github.com/stretchr/testify/require"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // TestCreateGoldenData is not a real test but a convenience to write a "Golden" file we can cherry pick from
@@ -33,7 +33,7 @@ func TestCreateGoldenData(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	server := cfgldr.NewServerConfigV1(common.LocalHostIP, cfgldr.ServerConfigV1Args{
+	server := cfgldr.NewServerConfigV1(localsvr.LocalHostIP, cfgldr.ServerConfigV1Args{
 		Port: 8080,
 		API:  api,
 	})

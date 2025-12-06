@@ -9,7 +9,7 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/appinfo"
 	"github.com/mikeschinkel/go-dt/dtx"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 const (
@@ -102,14 +102,14 @@ func (c *RootConfigV1) Normalize(args cfgstore.NormalizeArgs) error {
 	c.Version = RootConfigV1Version
 	c.DirType = args.DirType
 	if c.ServerConfig == nil {
-		c.ServerConfig = NewServerConfigV1(common.DefaultServerHost, ServerConfigV1Args{
-			Port: common.DefaultServerPort,
-			API:  NewAPIConfigV2(common.DefaultWebroot),
+		c.ServerConfig = NewServerConfigV1(localsvr.DefaultServerHost, ServerConfigV1Args{
+			Port: localsvr.DefaultServerPort,
+			API:  NewAPIConfigV2(localsvr.DefaultWebroot),
 		})
 	}
 	errs = AppendErr(errs, c.ServerConfig.Normalize(args))
 	if c.DBConfig == nil {
-		c.DBConfig = NewSQLite3ConfigV1(common.DefaultSQLite3Database)
+		c.DBConfig = NewSQLite3ConfigV1(localsvr.DefaultSQLite3Database)
 	}
 	errs = AppendErr(errs, c.DBConfig.Normalize(args))
 	return CombineErrs(errs)
@@ -234,7 +234,7 @@ func LoadRootConfigV1(args LoadRootConfigV1Args) (_ *RootConfigV1, err error) {
 	}
 
 	// Get externally set options such as via the switches on the command line
-	lrc, err = cfgstore.LoadRootConfig[RootConfigV1Wrapper, *RootConfigV1Wrapper](configStores, cfgstore.RootConfigArgs{
+	lrc, err = cfgstore.LoadConfigStores[RootConfigV1Wrapper, *RootConfigV1Wrapper](configStores, cfgstore.RootConfigArgs{
 		DirTypes:     args.DirTypes,
 		Options:      args.Options,
 		DirsProvider: args.DirsProvider,
@@ -243,7 +243,7 @@ func LoadRootConfigV1(args LoadRootConfigV1Args) (_ *RootConfigV1, err error) {
 		goto end
 	}
 	if lrc == nil {
-		panic("LoadRootConfig() returned nil")
+		panic("LoadConfigStores() returned nil")
 	}
 	rc = lrc.RootConfigV1
 
@@ -284,19 +284,19 @@ type GenerateConfigArgs struct {
 func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 	// Apply defaults
 	if args.Webroot == "" {
-		args.Webroot = common.DefaultWebroot
+		args.Webroot = localsvr.DefaultWebroot
 	}
 	if args.DBPath == "" {
-		args.DBPath = common.DefaultSQLite3Database
+		args.DBPath = localsvr.DefaultSQLite3Database
 	}
 	if args.DBBootstrap == "" {
-		args.DBBootstrap = common.DefaultDBBootstrapFilepath
+		args.DBBootstrap = localsvr.DefaultDBBootstrapFilepath
 	}
 	if args.Port == 0 {
-		args.Port = common.DefaultServerPort
+		args.Port = localsvr.DefaultServerPort
 	}
 	if args.Host == "" {
-		args.Host = common.DefaultServerHost
+		args.Host = localsvr.DefaultServerHost
 	}
 
 	// Create minimal API config with just webroot
@@ -346,7 +346,7 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 //	var server *ServerConfigV1
 //	var fp dt.Filepath
 //
-//	api = NewAPIConfigV2(common.DefaultWebroot)
+//	api = NewAPIConfigV2(localsvr.DefaultWebroot)
 //
 //	m := &APIParamsMap{}
 //	m.Set("q", "string")
@@ -434,11 +434,11 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 //		},
 //	}))
 //
-//	db = NewSQLite3ConfigV1(common.DefaultSQLite3Database)
+//	db = NewSQLite3ConfigV1(localsvr.DefaultSQLite3Database)
 //	db.Extensions = nil
 //	db.OnOpenSQL = []string{"PRAGMA foreign_keys = OFF;"}
 //
-//	server = NewServerConfigV1(common.DefaultServerHost, ServerConfigV1Args{
+//	server = NewServerConfigV1(localsvr.DefaultServerHost, ServerConfigV1Args{
 //		Port: 8080,
 //		API:  api,
 //	})

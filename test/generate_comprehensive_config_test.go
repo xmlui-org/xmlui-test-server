@@ -7,7 +7,7 @@ import (
 
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // generateConfig generates the api__test.json configuration file.
@@ -311,7 +311,7 @@ func generateConfig(outputPath string) error {
 	db.OnOpenSQL = []string{"PRAGMA foreign_keys = OFF;"}
 
 	// Create server config
-	server := cfgldr.NewServerConfigV1(common.DefaultServerHost, cfgldr.ServerConfigV1Args{
+	server := cfgldr.NewServerConfigV1(localsvr.DefaultServerHost, cfgldr.ServerConfigV1Args{
 		Port: 8080,
 		API:  api,
 		Notes: []string{

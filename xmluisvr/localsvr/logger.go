@@ -1,4 +1,4 @@
-package common
+package localsvr
 
 import (
 	"log/slog"
@@ -27,7 +27,7 @@ func SetLogger(l *slog.Logger) {
 
 func EnsureLogger() *slog.Logger {
 	if logger == nil {
-		panic("Must call common.SetLogger() with a *slog.Logger before reaching this check.")
+		panic("Must call localsvr.SetLogger() with a *slog.Logger before reaching this check.")
 	}
 	return logger
 }

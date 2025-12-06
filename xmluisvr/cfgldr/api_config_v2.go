@@ -11,7 +11,7 @@ import (
 	"github.com/mikeschinkel/go-cfgstore"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 const (
@@ -55,11 +55,11 @@ func NewAPIConfigV2(webroot string) *APIConfigV2 {
 		Schema:     APIConfigV2Schema,
 		Version:    APIConfigV2Version,
 		Notes:      make([]string, 0),
-		Name:       fmt.Sprintf("User-definable %s APIConfig", common.AppName),
-		BasePath:   common.DefaultAPIBasePath,
+		Name:       fmt.Sprintf("User-definable %s APIConfig", localsvr.AppName),
+		BasePath:   localsvr.DefaultAPIBasePath,
 		Webroot:    webroot,
 		Endpoints:  make([]*APIEndpointV2, 0),
-		SourceFile: common.DefaultAPIConfigFile,
+		SourceFile: localsvr.DefaultAPIConfigFile,
 	}
 }
 
@@ -127,7 +127,7 @@ func (c *APIConfigV2) Normalize(args cfgstore.NormalizeArgs) (err error) {
 		c.Version = APIConfigV2Version
 	}
 	if c.BasePath == "" {
-		c.BasePath = common.DefaultAPIBasePath
+		c.BasePath = localsvr.DefaultAPIBasePath
 	}
 	errs = AppendErr(errs, c.normalizeWebroot(args))
 	errs = AppendErr(errs, c.normalizeEndpoints(args))
@@ -142,7 +142,7 @@ func (c *APIConfigV2) AddEndpoint(endpoint *APIEndpointV2) {
 
 func (c *APIConfigV2) Migrate(oldCfg Config) (newCfg *APIConfigV2) {
 	v1 := oldCfg.(*APIDescription)
-	common.Noop(v1) // TODO Implement migration
+	localsvr.Noop(v1) // TODO Implement migration
 	return new(APIConfigV2)
 }
 

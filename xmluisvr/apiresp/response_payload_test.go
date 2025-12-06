@@ -10,16 +10,16 @@ import (
 	"github.com/mikeschinkel/go-rfc9457"
 	"github.com/mikeschinkel/go-testutil"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // TestMain sets up package-level configuration before running tests
 func TestMain(m *testing.M) {
 	// Set the GitHub repo URL to avoid log.Fatal during tests
-	apiresp.SetGitHubRepoURL(common.GitHubRepoURL)
+	apiresp.SetGitHubRepoURL(localsvr.GitHubRepoURL)
 
 	// Set up the buffered logger for tests
-	common.SetLogger(testutil.GetBufferedLogger())
+	localsvr.SetLogger(testutil.GetBufferedLogger())
 
 	// Run tests
 	os.Exit(m.Run())

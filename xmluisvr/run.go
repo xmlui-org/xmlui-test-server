@@ -2,7 +2,7 @@ package xmluisvr
 
 import (
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 
 	"github.com/mikeschinkel/go-cliutil"
 )
@@ -61,9 +61,9 @@ func Initialize(_ Context, args *RunArgs) (err error) {
 
 	// Setting the logger sets the package level logger variable so it is accessible
 	// throughout the package.
-	common.SetLogger(cfg.Logger)
+	localsvr.SetLogger(cfg.Logger)
 
-	apiresp.SetGitHubRepoURL(common.GitHubRepoURL)
+	apiresp.SetGitHubRepoURL(localsvr.GitHubRepoURL)
 
 	return err
 }

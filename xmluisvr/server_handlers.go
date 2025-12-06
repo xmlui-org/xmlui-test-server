@@ -18,8 +18,8 @@ import (
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apipkg"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 func (svr *Server) handleRootFunc() http.HandlerFunc {
@@ -55,7 +55,7 @@ func (svr *Server) serveFile(w http.ResponseWriter, r *http.Request, ep dt.Entry
 		http.NotFound(w, r)
 	}
 	ep = dt.EntryPathJoin(svr.API.Webroot, ep)
-	svr.Printf("Trying to serve: %s\n", common.HomeRelative(string(ep)))
+	svr.Printf("Trying to serve: %s\n", localsvr.HomeRelative(string(ep)))
 	status, err := ep.Status()
 	if err != nil {
 		goto end
@@ -291,7 +291,7 @@ func (svr *Server) handleProxyFunc() http.HandlerFunc {
 	}
 }
 
-func (svr *Server) getTargetURLAndPath(args apipkg.HandlerHelperArgs) (target *url.URL, up common.URLPath, err error) {
+func (svr *Server) getTargetURLAndPath(args apipkg.HandlerHelperArgs) (target *url.URL, up localsvr.URLPath, err error) {
 	var targetHost string
 
 	path := args.HTTPRequest.URL.Path
@@ -311,7 +311,7 @@ func (svr *Server) getTargetURLAndPath(args apipkg.HandlerHelperArgs) (target *u
 		)
 		goto end
 	}
-	up = common.URLPath(path)
+	up = localsvr.URLPath(path)
 
 	target, err = url.Parse(fmt.Sprintf("https://%s", hostPart))
 	targetHost = "'No host provided'"
@@ -388,7 +388,7 @@ func (svr *Server) proxyDirectorFunc(priorDirector func(*http.Request), proxy *h
 		priorDirector(out)
 
 		if len(path) >= 1 && path[0] != '/' {
-			path = common.URLPath("/" + string(path))
+			path = localsvr.URLPath("/" + string(path))
 		}
 		if path == "" {
 			path = "/"

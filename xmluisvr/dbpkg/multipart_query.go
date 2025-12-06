@@ -3,7 +3,7 @@ package dbpkg
 import (
 	"strings"
 
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 type MultipartQuery struct {
@@ -35,11 +35,11 @@ end:
 	return has
 }
 
-func (mpq *MultipartQuery) Source() (src common.QueryString) {
+func (mpq *MultipartQuery) Source() (src localsvr.QueryString) {
 	sb := strings.Builder{}
 	for _, qs := range mpq.QuerySources {
 		sb.WriteString(string(qs.Source))
 		sb.WriteByte('\n')
 	}
-	return common.QueryString(sb.String())
+	return localsvr.QueryString(sb.String())
 }

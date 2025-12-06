@@ -11,8 +11,8 @@ import (
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 
 	"github.com/mikeschinkel/go-jsonxtractr"
 	"github.com/mikeschinkel/go-rfc9457"
@@ -22,7 +22,7 @@ import (
 
 // ParseEndpoints converts a slice of configuration endpoint definitions
 // into parsed Endpoint structs. Each endpoint is validated during parsing.
-func ParseEndpoints(cfgEPs []*cfgldr.APIEndpointV2, basePath common.URLPath, db dbpkg.Database) (eps []*Endpoint, err error) {
+func ParseEndpoints(cfgEPs []*cfgldr.APIEndpointV2, basePath localsvr.URLPath, db dbpkg.Database) (eps []*Endpoint, err error) {
 	var errs []error
 	eps = make([]*Endpoint, len(cfgEPs))
 	for i, cfgEP := range cfgEPs {
@@ -45,7 +45,7 @@ func ParseEndpoints(cfgEPs []*cfgldr.APIEndpointV2, basePath common.URLPath, db 
 	return eps, err
 }
 
-func ParseQuery(query common.QueryString, db dbpkg.Database) (pq sqlparams.ParsedQuery, err error) {
+func ParseQuery(query localsvr.QueryString, db dbpkg.Database) (pq sqlparams.ParsedQuery, err error) {
 
 	// QueryFileExt is a proxy for Query Type.
 	// TODO: Maybe add a first-class QueryType later
@@ -61,7 +61,7 @@ func ParseQuery(query common.QueryString, db dbpkg.Database) (pq sqlparams.Parse
 
 // ParseEndpoint converts a configuration endpoint into a parsed Endpoint struct.
 // It validates all fields including HTTP method, URL path, parameters, and SQL configuration.
-func ParseEndpoint(cfg *cfgldr.APIEndpointV2, basePath common.URLPath, db dbpkg.Database) (ep *Endpoint, err error) {
+func ParseEndpoint(cfg *cfgldr.APIEndpointV2, basePath localsvr.URLPath, db dbpkg.Database) (ep *Endpoint, err error) {
 	var errs []error
 	var q string
 	ep = &Endpoint{
@@ -69,12 +69,12 @@ func ParseEndpoint(cfg *cfgldr.APIEndpointV2, basePath common.URLPath, db dbpkg.
 	}
 	q, err = cfg.GetQuery()
 	if err == nil {
-		ep.ParsedQuery, err = ParseQuery(common.QueryString(q), db)
+		ep.ParsedQuery, err = ParseQuery(localsvr.QueryString(q), db)
 	}
 	errs = AppendErr(errs, err)
 
 	// TODO: Allow or disallow defining endpoints without explicitly specifying a method? Maybe we should require "ANY"?
-	ep.method, err = common.ParseHTTPMethod(cfg.Method, common.EmptyOk)
+	ep.method, err = localsvr.ParseHTTPMethod(cfg.Method, localsvr.EmptyOk)
 	errs = AppendErr(errs, err)
 	var relPath *pathvars.ParsedTemplate
 	relPath, err = pathvars.ParseTemplate(cfg.Path)
@@ -127,7 +127,7 @@ type Endpoint struct {
 	Cardinality sqlparams.Cardinality  // Expected number of result rows (one, many, etc.)
 	RowType     sqlparams.DBRowType    // Format for returning results (json, columns, etc.)
 	ColumnTypes []sqlparams.DBDataType // Expected data types for result columns
-	method      common.HTTPMethod      // HTTP method (GET, POST, etc.)
+	method      localsvr.HTTPMethod    // HTTP method (GET, POST, etc.)
 	path        pathvars.Template      // URL path pattern with parameter placeholders
 	pathParsed  bool
 }
@@ -444,7 +444,7 @@ func (ep *Endpoint) ParsePathVarParameters() (params []pathvars.Parameter, err e
 //// GetQuery returns the SQL query for this endpoint, loading from a file if necessary.
 //// If QueryFile is specified, it loads the SQL from the file relative to the provided directory.
 //// Otherwise, it returns the inline Query string.
-//func (ep *Endpoint) GetQuery(dir dt.DirPath) (q common.QueryString, queryFile dt.Filepath, err error) {
+//func (ep *Endpoint) GetQuery(dir dt.DirPath) (q localsvr.QueryString, queryFile dt.Filepath, err error) {
 //	panic("FIX THIS")
 //	return q, "", err
 //}
@@ -463,9 +463,9 @@ func (ep *Endpoint) Path() pathvars.Template {
 }
 
 // Method returns the HTTP method for this endpoint, with ANY method converted to empty string.
-func (ep *Endpoint) Method() (m common.HTTPMethod) {
+func (ep *Endpoint) Method() (m localsvr.HTTPMethod) {
 	m = ep.RawMethod()
-	if m == common.ANYMethod {
+	if m == localsvr.ANYMethod {
 		m = ""
 		goto end
 	}
@@ -474,7 +474,7 @@ end:
 }
 
 // RawMethod returns the raw HTTP method without any processing.
-func (ep *Endpoint) RawMethod() common.HTTPMethod {
+func (ep *Endpoint) RawMethod() localsvr.HTTPMethod {
 	return ep.method
 }
 

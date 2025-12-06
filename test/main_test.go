@@ -12,7 +12,7 @@ import (
 
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-testutil"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 var (
@@ -51,7 +51,7 @@ func setup() error {
 
 	// This ensures the logger is set up before cfgldr package initialization
 	logger := slog.New(testutil.NewBufferedLogHandler())
-	common.SetLogger(logger)
+	localsvr.SetLogger(logger)
 
 	// Setup common test data that all tests can use
 	wd, _ := os.Getwd()

@@ -1,4 +1,4 @@
-package common
+package localsvr
 
 import (
 	"time"
@@ -19,7 +19,7 @@ type Options struct {
 	DBBootstrapFile       dt.Filepath
 	ErrorStyle            ErrorStyle
 	AllowUntrustedQueries bool
-	CLIOptions            *cliutil.CLIOptions
+	GlobalOptions         *cliutil.GlobalOptions
 	Webroot               dt.DirPath
 }
 

@@ -1,4 +1,4 @@
-package common
+package localsvr
 
 type (
 	DirPath         string //Absolute or Relative

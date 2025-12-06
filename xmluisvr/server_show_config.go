@@ -7,7 +7,7 @@ import (
 
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 func (svr *Server) showConfig() {
@@ -52,19 +52,19 @@ func (svr *Server) displayWebroot() (wr string) {
 		}
 		dp = dt.DirPathJoin(wd, svr.API.Webroot)
 	}
-	wr = common.HomeRelative(string(dp))
+	wr = localsvr.HomeRelative(string(dp))
 end:
 	return wr
 }
 
 func (svr *Server) displayAPISourceFile() string {
-	return common.HomeRelative(string(svr.API.SourceFile))
+	return localsvr.HomeRelative(string(svr.API.SourceFile))
 }
 func (svr *Server) displayDBSourceFile() string {
-	return common.HomeRelative(string(svr.Database.SourceFile()))
+	return localsvr.HomeRelative(string(svr.Database.SourceFile()))
 }
 func (svr *Server) displayServerSourceFile() string {
-	return common.HomeRelative(string(svr.SourceFile))
+	return localsvr.HomeRelative(string(svr.SourceFile))
 }
 
 func (svr *Server) displayDir() (d string) {
@@ -78,7 +78,7 @@ func (svr *Server) displayDir() (d string) {
 		d = "Working directory unavailable"
 		goto end
 	}
-	d = common.HomeRelative(wd)
+	d = localsvr.HomeRelative(wd)
 end:
 	return d
 }

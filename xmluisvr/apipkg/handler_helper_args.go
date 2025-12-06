@@ -10,8 +10,8 @@ import (
 	"github.com/mikeschinkel/go-pathvars"
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 type HandlerHelperArgs struct {
@@ -26,7 +26,7 @@ type HandlerHelperArgs struct {
 	RequestBody bytes.Buffer
 	Content     any
 	TargetURL   *url.URL
-	URLPath     common.URLPath
+	URLPath     localsvr.URLPath
 }
 
 func (args HandlerHelperArgs) GetQueryString() (qs sqlparams.QueryString, err error) {

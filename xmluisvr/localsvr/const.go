@@ -1,4 +1,4 @@
-// Package common provides shared utilities, types, and constants used throughout xmlui-localsvr.
+// Package localsvr provides shared utilities, types, and constants used throughout xmlui-localsvr.
 //
 // This package contains foundational utilities that are used across all other packages:
 //
@@ -24,16 +24,16 @@
 // Most types have corresponding ParseBytes* functions that validate input and return
 // typed values or descriptive errors:
 //
-//	port, err := common.ParseServerPort(8080, common.ZeroInvalid)
-//	method, err := common.ParseHTTPMethod("GET", common.EmptyInvalid)
-//	path, err := common.ParseURLPath("/api/v1/users")
+//	port, err := localsvr.ParseServerPort(8080, localsvr.ZeroInvalid)
+//	method, err := localsvr.ParseHTTPMethod("GET", localsvr.EmptyInvalid)
+//	path, err := localsvr.ParseURLPath("/api/v1/users")
 //
 // # Error Handling
 //
-// The package defines common error types and provides utilities for error
+// The package defines localsvr error types and provides utilities for error
 // handling throughout the application, following Go best practices for
 // error wrapping and context.
-package common
+package localsvr
 
 import (
 	"path/filepath"

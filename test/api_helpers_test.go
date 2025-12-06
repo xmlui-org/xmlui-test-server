@@ -28,7 +28,7 @@ import (
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 const (
@@ -188,8 +188,8 @@ func setupTestEnvironment(t *testing.T, configContent string) *testEnvironment {
 
 	args := &cstest.TestDirsProviderArgs{
 		Username:   TestUsername,
-		ProjectDir: dt.DirPath(common.AppSlug),
-		ConfigSlug: common.ConfigSlug,
+		ProjectDir: dt.DirPath(localsvr.AppSlug),
+		ConfigSlug: localsvr.ConfigSlug,
 		TestRootFunc: func() dt.DirPath {
 			return rootFix.Dir()
 		},
@@ -199,8 +199,8 @@ func setupTestEnvironment(t *testing.T, configContent string) *testEnvironment {
 	// Get the config stores map
 	css := cfgstore.NewConfigStores(cfgstore.ConfigStoresArgs{
 		ConfigStoreArgs: cfgstore.ConfigStoreArgs{
-			ConfigSlug:   common.ConfigSlug,
-			RelFilepath:  common.ConfigFile,
+			ConfigSlug:   localsvr.ConfigSlug,
+			RelFilepath:  localsvr.ConfigFile,
 			DirsProvider: dirsProvider,
 		},
 	})
@@ -211,7 +211,7 @@ func setupTestEnvironment(t *testing.T, configContent string) *testEnvironment {
 	}
 	// Create .config directory for user config
 	cliFix := rootFix.AddDirFixture(t, cliDir, nil)
-	configFile := cliFix.AddFileFixture(t, common.ConfigFile, &fsfix.FileFixtureArgs{
+	configFile := cliFix.AddFileFixture(t, localsvr.ConfigFile, &fsfix.FileFixtureArgs{
 		Content: configContent,
 	})
 	dbFix := cliFix.AddDirFixture(t, "db", nil)
@@ -228,7 +228,7 @@ func setupTestEnvironment(t *testing.T, configContent string) *testEnvironment {
 	}
 	// Create project directory for project config (same content for simplicity)
 	projectFix := rootFix.AddDirFixture(t, projectDir, nil)
-	projectFix.AddFileFixture(t, common.ConfigFile, &fsfix.FileFixtureArgs{
+	projectFix.AddFileFixture(t, localsvr.ConfigFile, &fsfix.FileFixtureArgs{
 		Content: configContent,
 	})
 
@@ -247,7 +247,7 @@ func setupTestEnvironment(t *testing.T, configContent string) *testEnvironment {
 	bufferedWriter := testutil.NewBufferedWriter()
 
 	// Set as global logger
-	common.SetLogger(logger)
+	localsvr.SetLogger(logger)
 
 	return &testEnvironment{
 		rootFixture:        rootFix,
@@ -303,7 +303,7 @@ func setupTestServer(t *testing.T, configContent string) *TestServer {
 		DBBootstrapFile: string(env.bootstrapFile.Filepath),
 		Timeout:         300,
 		Verbosity:       3, // Max verbosity for debugging
-		ErrorStyle:      string(common.DevelopmentStyle),
+		ErrorStyle:      string(localsvr.DevelopmentStyle),
 	}
 
 	// Load root config

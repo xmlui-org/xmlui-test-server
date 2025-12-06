@@ -11,42 +11,42 @@ import (
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apipkg"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // ParseOptions converts raw options from cfgldr.Options into
-// validated common.Options. This method performs validation and type conversion
+// validated localsvr.Options. This method performs validation and type conversion
 // for all XMLUI Test Server options.
-func ParseOptions(cfgOpts *cfgldr.Options) (opts *common.Options, err error) {
+func ParseOptions(cfgOpts *cfgldr.Options) (opts *localsvr.Options, err error) {
 	var errs []error
-	var cliOpts *cliutil.CLIOptions
+	var globalOpts *cliutil.GlobalOptions
 
-	cliOpts, err = cliutil.NewCLIOptions(cliutil.CLIOptionsArgs{
+	globalOpts, err = cliutil.NewGlobalOptions(cliutil.GlobalOptionsArgs{
 		Quiet:     &cfgOpts.Quiet,
 		Verbosity: &cfgOpts.Verbosity,
 	})
 	errs = AppendErr(errs, err)
 
-	opts = &common.Options{
-		CLIOptions:            cliOpts,
+	opts = &localsvr.Options{
+		GlobalOptions:         globalOpts,
 		AllowUntrustedQueries: cfgOpts.AllowUntrustedQueries,
 	}
-	opts.Timeout, err = common.ParseTimeDurationEx(strconv.Itoa(cfgOpts.Timeout))
+	opts.Timeout, err = localsvr.ParseTimeDurationEx(strconv.Itoa(cfgOpts.Timeout))
 	errs = AppendErr(errs, err)
-	opts.HTTPPort, err = common.ParseServerPort(cfgOpts.HTTPPort, common.ZeroOk)
+	opts.HTTPPort, err = localsvr.ParseServerPort(cfgOpts.HTTPPort, localsvr.ZeroOk)
 	errs = AppendErr(errs, err)
-	opts.DBExtensionFiles, err = common.ParseFilepaths(cfgOpts.DBExtensionFiles)
+	opts.DBExtensionFiles, err = localsvr.ParseFilepaths(cfgOpts.DBExtensionFiles)
 	errs = AppendErr(errs, err)
 	opts.APIFile, err = dt.ParseFilepath(cfgOpts.APIFile)
 	errs = AppendErr(errs, err)
-	opts.ConnectString, err = common.ParseConnectString(cfgOpts.ConnectString)
+	opts.ConnectString, err = localsvr.ParseConnectString(cfgOpts.ConnectString)
 	errs = AppendErr(errs, err)
-	opts.DBPort, err = common.ParseServerPort(cfgOpts.DBPort, common.ZeroOk)
+	opts.DBPort, err = localsvr.ParseServerPort(cfgOpts.DBPort, localsvr.ZeroOk)
 	errs = AppendErr(errs, err)
 	opts.DBBootstrapFile, err = dt.ParseFilepath(cfgOpts.DBBootstrapFile)
 	errs = AppendErr(errs, err)
-	opts.ErrorStyle, err = common.ParseErrorStyle(cfgOpts.ErrorStyle)
+	opts.ErrorStyle, err = localsvr.ParseErrorStyle(cfgOpts.ErrorStyle)
 	errs = AppendErr(errs, err)
 	opts.Webroot, err = dt.ParseDirPath(cfgOpts.Webroot)
 	errs = AppendErr(errs, err)
@@ -57,7 +57,7 @@ func ParseOptions(cfgOpts *cfgldr.Options) (opts *common.Options, err error) {
 type ParseAPIArgs struct {
 	APIConfig cfgldr.APIConfig
 	Database  dbpkg.Database
-	Options   *common.Options
+	Options   *localsvr.Options
 	Writer    cliutil.Writer
 	Logger    *slog.Logger
 }
@@ -101,7 +101,7 @@ end:
 type ParseDatabaseArgs struct {
 	Writer       cliutil.Writer
 	Logger       *slog.Logger
-	Options      *common.Options
+	Options      *localsvr.Options
 	DBConfig     cfgldr.DatabaseConfig
 	DirsProvider *cfgstore.DirsProvider
 	DirType      cfgstore.DirType
@@ -112,10 +112,10 @@ type ParseDatabaseArgs struct {
 func ParseDatabase(ctx Context, args ParseDatabaseArgs) (db dbpkg.Database, err error) {
 
 	if args.Options.ConnectString == "" {
-		args.Options.ConnectString = common.ConnectString(common.DefaultSQLite3Database)
+		args.Options.ConnectString = localsvr.ConnectString(localsvr.DefaultSQLite3Database)
 	}
 
-	if common.IsNil(args.DBConfig) {
+	if localsvr.IsNil(args.DBConfig) {
 		err = NewErr(
 			ErrNoConfigProvided,
 			"config_type", "database",
@@ -146,7 +146,7 @@ end:
 // ParseServerArgs contains the dependencies needed to create a Server instance.
 type ParseServerArgs struct {
 	Database     dbpkg.Database      // Database connection
-	Options      *common.Options     // Parsed and validated options
+	Options      *localsvr.Options   // Parsed and validated options
 	ServerConfig cfgldr.ServerConfig // Server configuration
 	Writer       cliutil.Writer
 	Logger       *slog.Logger
@@ -160,7 +160,7 @@ func ParseServer(args ParseServerArgs) (svr *Server, err error) {
 	var svrCfg *cfgldr.ServerConfigV1
 	var httpPort int
 
-	if common.IsNil(args.ServerConfig) {
+	if localsvr.IsNil(args.ServerConfig) {
 		err = NewErr(
 			ErrNoConfigProvided,
 			"config_type", "server",
@@ -176,7 +176,7 @@ func ParseServer(args ParseServerArgs) (svr *Server, err error) {
 	case "localhost", "127.0.0.1":
 		// S'all good, man!
 	default:
-		args.Writer.Errorf("%s is not a valid host; %s only supports localhost; defaulting to localhost.\n", svrCfg.Host, common.AppName)
+		args.Writer.Errorf("%s is not a valid host; %s only supports localhost; defaulting to localhost.\n", svrCfg.Host, localsvr.AppName)
 	}
 
 	httpPort = int(args.Options.HTTPPort)
@@ -184,9 +184,9 @@ func ParseServer(args ParseServerArgs) (svr *Server, err error) {
 		httpPort = svrCfg.Port
 	}
 	if httpPort == 0 {
-		httpPort = common.DefaultServerPort
+		httpPort = localsvr.DefaultServerPort
 	}
-	args.Options.HTTPPort, err = common.ParseServerPort(httpPort, common.ZeroInvalid)
+	args.Options.HTTPPort, err = localsvr.ParseServerPort(httpPort, localsvr.ZeroInvalid)
 	if err != nil {
 		err = NewErr(ErrInvalidServerPort, err)
 		goto end
@@ -212,7 +212,7 @@ end:
 }
 
 type ParseConfigArgs struct {
-	Options      *common.Options
+	Options      *localsvr.Options
 	Logger       *slog.Logger
 	Writer       cliutil.Writer
 	DirsProvider *cfgstore.DirsProvider

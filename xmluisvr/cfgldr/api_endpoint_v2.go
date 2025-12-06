@@ -12,7 +12,7 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // APIEndpointV2 is the main endpoint struct using JSONV2 inline to flatten the JSON
@@ -41,7 +41,7 @@ func (ep APIEndpointBase) Endpoint() string {
 	var method string
 	var path string
 	if ep.Method == "" {
-		method = string(common.ANYMethod)
+		method = string(localsvr.ANYMethod)
 	} else {
 		method = ep.Method
 	}

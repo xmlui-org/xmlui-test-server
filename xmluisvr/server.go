@@ -10,8 +10,8 @@ import (
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apipkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // InboundProxyProtocol defines the protocol used for inbound proxy requests.
@@ -32,32 +32,32 @@ type API struct{}
 //   - Configurable API endpoints based on JSON configuration
 //   - CORS middleware for cross-origin requests
 type Server struct {
-	Database             dbpkg.Database    // Database connection and operations
-	API                  *apipkg.API       // API configuration and handlers
-	Options              *common.Options   // Server configuration options
-	port                 common.ServerPort // HTTP server port
-	SourceFile           dt.Filepath       // Path to server configuration file
-	Mux                  *http.ServeMux    // HTTP request multiplexer
-	cliutil.WriterLogger                   // Embedded logging functionality
+	Database             dbpkg.Database      // Database connection and operations
+	API                  *apipkg.API         // API configuration and handlers
+	Options              *localsvr.Options   // Server configuration options
+	port                 localsvr.ServerPort // HTTP server port
+	SourceFile           dt.Filepath         // Path to server configuration file
+	Mux                  *http.ServeMux      // HTTP request multiplexer
+	cliutil.WriterLogger                     // Embedded logging functionality
 }
 
 // ServerArgs contains all the dependencies and configuration needed to create a Server.
 type ServerArgs struct {
-	Database   dbpkg.Database    // Database connection
-	API        *apipkg.API       // API configuration
-	Port       common.ServerPort // HTTP server port
-	SourceFile dt.Filepath       // Configuration file path
-	Options    *common.Options   // Server options
-	Writer     CLIWriter         // CLI output writer
-	Logger     *slog.Logger      // Structured logger
+	Database   dbpkg.Database      // Database connection
+	API        *apipkg.API         // API configuration
+	Port       localsvr.ServerPort // HTTP server port
+	SourceFile dt.Filepath         // Configuration file path
+	Options    *localsvr.Options   // Server options
+	Writer     CLIWriter           // CLI output writer
+	Logger     *slog.Logger        // Structured logger
 }
 
 // NewServer creates a new Server instance with the provided configuration.
-// If no port is specified, it defaults to common.DefaultServerPort.
+// If no port is specified, it defaults to localsvr.DefaultServerPort.
 // The server is created with an HTTP multiplexer and embedded logging.
 func NewServer(args ServerArgs) *Server {
 	if args.Port == 0 {
-		args.Port = common.DefaultServerPort
+		args.Port = localsvr.DefaultServerPort
 	}
 	return &Server{
 		Database:     args.Database,
@@ -76,7 +76,7 @@ func NewServer(args ServerArgs) *Server {
 func (svr *Server) Initialize(ctx Context) (err error) {
 	svr.V2().InfoPrint("Initializing server")
 	err = svr.API.Initialize(ctx)
-	if errors.Is(err, common.ErrNoAPIProvided) {
+	if errors.Is(err, localsvr.ErrNoAPIProvided) {
 		svr.Printf("No APIConfig loaded")
 		err = nil
 	}
@@ -128,11 +128,11 @@ func (svr *Server) corsMiddleware(next http.Handler) http.Handler {
 
 // Host returns the full host:port string for the server.
 func (svr *Server) Host() string {
-	return fmt.Sprintf("%s:%d", common.DefaultServerHost, svr.port)
+	return fmt.Sprintf("%s:%d", localsvr.DefaultServerHost, svr.port)
 }
 
 // Port returns the server's configured port number.
-func (svr *Server) Port() common.ServerPort {
+func (svr *Server) Port() localsvr.ServerPort {
 	return svr.port
 }
 
@@ -156,7 +156,7 @@ func (svr *Server) addRoutes() {
 
 	// Handle proxy next
 	svr.V3().Printf("  — ANY  /proxy/\n")
-	for _, method := range common.HTTPMethods {
+	for _, method := range localsvr.HTTPMethods {
 		svr.Mux.HandleFunc(fmt.Sprintf("%s /proxy/", method), svr.handleProxyFunc())
 	}
 

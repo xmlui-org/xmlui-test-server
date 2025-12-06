@@ -2,21 +2,21 @@ package xmluisvr
 
 import (
 	"github.com/mikeschinkel/go-dt/appinfo"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 var appInfo = appinfo.New(appinfo.Args{
-	Name:        common.AppName,
-	Description: common.AppDescr,
-	Version:     common.AppVer,
-	AppSlug:     common.AppSlug,
-	ConfigSlug:  common.ConfigSlug,
-	ConfigFile:  common.ConfigFile,
-	InfoURL:     common.InfoURL,
-	ExeName:     common.ExeName,
-	LogFile:     common.LogFile,
-	LogPath:     common.LogPath,
-	ExtraInfo:   common.ExtraInfo,
+	Name:        localsvr.AppName,
+	Description: localsvr.AppDescr,
+	Version:     localsvr.AppVer,
+	AppSlug:     localsvr.AppSlug,
+	ConfigSlug:  localsvr.ConfigSlug,
+	ConfigFile:  localsvr.ConfigFile,
+	InfoURL:     localsvr.InfoURL,
+	ExeName:     localsvr.ExeName,
+	LogFile:     localsvr.LogFile,
+	LogPath:     localsvr.LogPath,
+	ExtraInfo:   localsvr.ExtraInfo,
 })
 
 func AppInfo() appinfo.AppInfo {

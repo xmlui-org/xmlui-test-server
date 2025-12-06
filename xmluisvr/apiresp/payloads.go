@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/mikeschinkel/go-rfc9457"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 func NoResultsPayload(req *http.Request, args PayloadArgs) (pr PayloadResult) {
@@ -169,9 +169,9 @@ func QueryFailedPayload(req *http.Request, args PayloadArgs) (pr PayloadResult) 
 	use := args.clone()
 	detail := "Database or API configuration error"
 	switch use.GetErrorStyle() {
-	case common.DevelopmentStyle:
+	case localsvr.DevelopmentStyle:
 		detail = fmt.Sprintf("%s; %s", detail, use.GetError().Error())
-	case common.PresentationStyle:
+	case localsvr.PresentationStyle:
 		detail = fmt.Sprintf("%s; check logs if you have server access.", detail)
 	}
 

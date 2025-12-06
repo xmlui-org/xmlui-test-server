@@ -12,7 +12,7 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtglob"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // SiteInstaller handles the installation of a demo from a manifest
@@ -48,13 +48,13 @@ type SiteInstallerArgs struct {
 
 func NewSiteInstaller(args SiteInstallerArgs) *SiteInstaller {
 	return &SiteInstaller{
-		ConfigPath:        common.ConfigPath,
-		ConfigFilename:    common.ConfigFilename,
-		DemosPath:         common.DemosPath,
-		WebrootPath:       common.WebrootPath,
-		DBRootPath:        common.DBRootPath,
-		DBFilename:        common.DBFilename,
-		BootstrapFilename: common.BootstrapFilename,
+		ConfigPath:        localsvr.ConfigPath,
+		ConfigFilename:    localsvr.ConfigFilename,
+		DemosPath:         localsvr.DemosPath,
+		WebrootPath:       localsvr.WebrootPath,
+		DBRootPath:        localsvr.DBRootPath,
+		DBFilename:        localsvr.DBFilename,
+		BootstrapFilename: localsvr.BootstrapFilename,
 		Manifest:          args.Manifest,
 		ConfigDir:         args.ConfigDir,
 		SourceDir:         args.SourceDir,

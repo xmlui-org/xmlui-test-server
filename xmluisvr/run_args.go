@@ -9,7 +9,7 @@ import (
 	"github.com/mikeschinkel/go-dt/appinfo"
 	"github.com/mikeschinkel/go-logutil"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // RunArgs contains all the configuration and dependencies needed to run the server.
@@ -18,7 +18,7 @@ type RunArgs struct {
 	CLIArgs      []string               // Command-line arguments (currently unused)
 	AppInfo      appinfo.AppInfo        // Developer-maintained application information
 	Config       *Config                // Parsed configuration from files
-	Options      *common.Options        // Parsed command-line options
+	Options      *localsvr.Options      // Parsed command-line options
 	DirsProvider *cfgstore.DirsProvider // Optional custom directory provider for config loading
 }
 
@@ -66,7 +66,7 @@ end:
 //   - Options: Parsed common options
 func ParseRunArgs(ctx context.Context, cfgOpts *cfgldr.Options, args *RunArgs) (runArgs *RunArgs, err error) {
 	var cfg *cfgldr.RootConfigV1
-	var opts *common.Options
+	var opts *localsvr.Options
 	var config *Config
 	var logger *slog.Logger
 	var projectDir dt.DirPath

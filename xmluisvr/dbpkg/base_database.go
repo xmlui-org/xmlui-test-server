@@ -10,7 +10,7 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 type BaseDatabase struct {
@@ -23,12 +23,12 @@ type BaseDatabase struct {
 	OnOpenQueries    *MultipartQuery
 	extensions       []DBExtension
 	sourceFile       dt.Filepath
-	options          *common.Options
+	options          *localsvr.Options
 	AccessMode       AccessMode
 	Initialized      bool
 }
 
-func (db *BaseDatabase) Options() common.Options {
+func (db *BaseDatabase) Options() localsvr.Options {
 	return *db.options
 }
 
@@ -143,7 +143,7 @@ func (db *BaseDatabase) ValidateFileConnection(ctx Context, dbType DatabaseType,
 		err = NewErr(err)
 	case dt.IsFileEntry:
 		// What we are looking for; carry on!
-		err = db.PingDB(ctx, dbType, common.ConnectString(cs))
+		err = db.PingDB(ctx, dbType, localsvr.ConnectString(cs))
 	case dt.IsSymlinkEntry:
 		// Follow the symlink
 		var newCS dt.Filepath
@@ -167,7 +167,7 @@ end:
 }
 
 // PingDB checks for file connections which work for SQLite3 and DuckDB.
-func (db *BaseDatabase) PingDB(_ Context, dbType DatabaseType, cs common.ConnectString) (err error) {
+func (db *BaseDatabase) PingDB(_ Context, dbType DatabaseType, cs localsvr.ConnectString) (err error) {
 	var sqlDB *sql.DB
 
 	defer func() {
@@ -197,7 +197,7 @@ func (db *BaseDatabase) HomeRelativeFile() string {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get absolute path of '%s': %v", db.conn, err))
 	}
-	return common.HomeRelative(absPath)
+	return localsvr.HomeRelative(absPath)
 }
 
 func (db *BaseDatabase) Extensions() []DBExtension {

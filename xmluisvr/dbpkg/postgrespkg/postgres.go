@@ -13,8 +13,8 @@ import (
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 func init() {
@@ -73,7 +73,7 @@ func (p *Postgres) IsConnectString(cs string) bool {
 }
 
 func (p *Postgres) Open(_ context.Context) (err error) {
-	var cs common.ConnectString
+	var cs localsvr.ConnectString
 
 	p.writer.Printf("Using PostgreSQL database\n")
 	p.logger.Info("Opening PostgreSQL database")
@@ -98,12 +98,12 @@ func (p *Postgres) Query(ctx dbpkg.Context, q string, params ...any) (*sql.Rows,
 	return p.database.Query(ctx, FormatQueryForPostgres(q), params...)
 }
 
-func (p *Postgres) ValidatedConnection(ctx dbpkg.Context, dbType dbpkg.DatabaseType, connStr common.ConnectString) (err error) {
+func (p *Postgres) ValidatedConnection(ctx dbpkg.Context, dbType dbpkg.DatabaseType, connStr localsvr.ConnectString) (err error) {
 	return p.PingDB(ctx, dbType, connStr)
 }
 
 // ParseConnectString injects or overrides the port in a Postgres connection string (URL or DSN format)
-func (p *Postgres) ParseConnectString(cs string) (common.ConnectString, error) {
+func (p *Postgres) ParseConnectString(cs string) (localsvr.ConnectString, error) {
 	return ParsePGConnectString(cs, p.port)
 }
 
@@ -111,7 +111,7 @@ var postgresPrefixRE = regexp.MustCompile(`^\s*postgres(ql)?://`)
 var dsnFormatRE = regexp.MustCompile(`port=\\d+`)
 
 // ParsePGConnectString injects or overrides the port in a Postgres connection string (URL or DSN format)
-func ParsePGConnectString(cs string, port int) (_ common.ConnectString, err error) {
+func ParsePGConnectString(cs string, port int) (_ localsvr.ConnectString, err error) {
 	if port == 0 {
 		goto end
 	}
@@ -144,7 +144,7 @@ func ParsePGConnectString(cs string, port int) (_ common.ConnectString, err erro
 	}
 	cs = fmt.Sprintf("%s port=%d", cs, port)
 end:
-	return common.ConnectString(cs), err
+	return localsvr.ConnectString(cs), err
 }
 
 // FormatQueryForPostgres replaces ? in query w/numbered params in $n format

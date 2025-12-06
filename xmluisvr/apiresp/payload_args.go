@@ -7,7 +7,7 @@ import (
 	"github.com/mikeschinkel/go-pathvars"
 	"github.com/mikeschinkel/go-rfc9457"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 var paType = (*PayloadArgs)(nil)
@@ -35,7 +35,7 @@ type PayloadArgs struct {
 	Suggestion        string
 	Location          LocationType
 	HTTPStatus        int
-	ErrorStyle        common.ErrorStyle
+	ErrorStyle        localsvr.ErrorStyle
 	Error             error
 	MissingParameters []MissingParameter
 	DBQuery           sqlparams.QueryString
@@ -116,7 +116,7 @@ func (args *PayloadArgs) GetHTTPStatus() int {
 	return args.HTTPStatus
 }
 
-func (args *PayloadArgs) GetErrorStyle() common.ErrorStyle {
+func (args *PayloadArgs) GetErrorStyle() localsvr.ErrorStyle {
 	args.useProp(unsafe.Offsetof(args.ErrorStyle))
 	return args.ErrorStyle
 }

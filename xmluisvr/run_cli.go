@@ -10,7 +10,7 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-logutil"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // RunCLI is the main CLI entry point for the xmlui-localsvr application.
@@ -69,18 +69,18 @@ func RunCLI(cfgOpts *cfgldr.Options) {
 	//goland:noinspection GoMaybeNil
 	defer dt.CloseOrLog(runArgs.Config.Database)
 
-	common.SetLogger(runArgs.Config.Logger)
+	localsvr.SetLogger(runArgs.Config.Logger)
 	wl = cliutil.NewWriterLogger(writer, runArgs.Config.Logger)
 
 	err = Run(ctx, runArgs)
 
 	switch {
 	case err == nil:
-		writer.Printf("%s terminated gracefully", common.AppName)
+		writer.Printf("%s terminated gracefully", localsvr.AppName)
 	case errors.Is(err, ErrServerError):
 		_ = wl.ErrorError("CLI terminated with error:",
-			"cli_name", common.AppName,
-			"exe_name", common.ExeName,
+			"cli_name", localsvr.AppName,
+			"exe_name", localsvr.ExeName,
 			"error", err,
 		)
 		os.Exit(cliutil.ExitKnownRuntimeError)

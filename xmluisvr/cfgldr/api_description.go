@@ -9,7 +9,7 @@ import (
 
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/common"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 type Context = context.Context
@@ -35,7 +35,7 @@ func (d *APIDescription) Migrate() *APIConfigV2 {
 		Version:    APIConfigV2Version,
 		Name:       d.Description,
 		BasePath:   d.BasePath,
-		Webroot:    common.DefaultWebroot,
+		Webroot:    localsvr.DefaultWebroot,
 		Endpoints:  endpoints,
 		SourceFile: "",
 	}
