@@ -6,7 +6,7 @@ require (
 	github.com/mikeschinkel/go-cfgstore v0.4.0
 	github.com/mikeschinkel/go-dt v0.3.3
 	github.com/mikeschinkel/go-fsfix v0.2.1
-	github.com/mikeschinkel/go-jsontest v0.2.0
+	github.com/mikeschinkel/go-jsontest v0.1.2
 	github.com/mikeschinkel/go-testutil v0.2.1
 	github.com/stretchr/testify v1.11.1
 	github.com/xmlui-org/xmlui-test-server/xmluisvr v0.5.0

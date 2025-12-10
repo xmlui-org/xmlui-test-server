@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/mikeschinkel/go-dt"
@@ -51,13 +51,16 @@ type Variant struct {
 	Copy []CopyRule `json:"copy"`
 }
 
+var httpRegex = regexp.MustCompile("^https?://")
+
 // LoadManifest loads and parses a manifest from the given URL or file path
 func LoadManifest(manifestURLOrPath string) (manifest *Manifest, err error) {
 	var resp *http.Response
 	var body []byte
 
 	// Check if it's a URL (http/https) or a local file path
-	if strings.HasPrefix(manifestURLOrPath, "http://") || strings.HasPrefix(manifestURLOrPath, "https://") {
+	//goland:noinspection HttpUrlsUsage
+	if httpRegex.MatchString(manifestURLOrPath) {
 		// Load from URL
 		resp, err = httpClient.Get(manifestURLOrPath)
 		if err != nil {

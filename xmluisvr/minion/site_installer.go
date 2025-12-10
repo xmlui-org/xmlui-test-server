@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mikeschinkel/go-cliutil"
@@ -20,7 +21,9 @@ import (
 type SiteInstaller struct {
 	Manifest          *Manifest
 	ConfigDir         dt.DirPath
+	InstallDir        dt.DirPath
 	SourceDir         dt.DirPath
+	Ref               dt.Identifier
 	Branch            string
 	Tag               string
 	Overwrite         bool
@@ -36,18 +39,18 @@ type SiteInstaller struct {
 }
 
 type SiteInstallerArgs struct {
-	Manifest  *Manifest
-	ConfigDir dt.DirPath
-	SourceDir dt.DirPath
-	Branch    string
-	Tag       string
-	Overwrite bool
-	DryRun    bool
-	Writer    cliutil.Writer
+	Manifest   *Manifest
+	ConfigDir  dt.DirPath
+	InstallDir dt.DirPath
+	SourceDir  dt.DirPath
+	Ref        dt.Identifier
+	Overwrite  bool
+	DryRun     bool
+	Writer     cliutil.Writer
 }
 
 func NewSiteInstaller(args SiteInstallerArgs) *SiteInstaller {
-	return &SiteInstaller{
+	si := &SiteInstaller{
 		ConfigPath:        localsvr.ConfigPath,
 		ConfigFilename:    localsvr.ConfigFilename,
 		DemosPath:         localsvr.DemosPath,
@@ -57,22 +60,30 @@ func NewSiteInstaller(args SiteInstallerArgs) *SiteInstaller {
 		BootstrapFilename: localsvr.BootstrapFilename,
 		Manifest:          args.Manifest,
 		ConfigDir:         args.ConfigDir,
+		InstallDir:        args.InstallDir,
 		SourceDir:         args.SourceDir,
-		Branch:            args.Branch,
-		Tag:               args.Tag,
+		Ref:               args.Ref,
 		Overwrite:         args.Overwrite,
 		DryRun:            args.DryRun,
 		Writer:            args.Writer,
 	}
+
+	// Backward compatibility: if InstallDir not provided, compute from slug
+	if si.InstallDir == "" {
+		si.InstallDir = dt.DirPathJoin3(si.ConfigDir, si.DemosPath, si.Manifest.Slug)
+	}
+
+	return si
 }
 
 type InstallResult struct {
 	InstallDir dt.DirPath
 	ConfigFile dt.Filepath
+	SiteName   string
 }
 
 func (si *SiteInstaller) installDir() dt.DirPath {
-	return dt.DirPathJoin3(si.ConfigDir, si.DemosPath, si.Manifest.Slug)
+	return si.InstallDir
 }
 
 func (si *SiteInstaller) configFile() dt.Filepath {
@@ -156,6 +167,7 @@ end:
 		result = &InstallResult{
 			InstallDir: si.installDir(),
 			ConfigFile: si.configFile(),
+			SiteName:   string(si.Manifest.Slug),
 		}
 	}
 	return result, err
@@ -325,33 +337,28 @@ end:
 
 func (si *SiteInstaller) downloadURL() (url dt.URL, err error) {
 	var repo string
-	var ref string
+	var ref dt.Identifier
 	var source = si.Manifest.Source
-	repo = source.Repo
-
-	// Determine the ref (branch or tag)
-	switch {
-	case si.Tag != "":
-		ref = si.Tag
-	case si.Branch != "":
-		ref = si.Branch
-	case source.Tag != "":
-		ref = source.Tag
-	case source.Branch != "":
-		ref = source.Branch
-	default:
-		err = fmt.Errorf("no branch or tag specified in manifest or flags")
-		goto end
-	}
 
 	switch source.Type {
-	case "zip":
-		// GitHub archive URL for branch or tag
-		url = dt.URL(fmt.Sprintf("https://github.com/%s/archive/refs/heads/%s.zip", repo, ref))
+	case URLSourceType:
+		// Direct URL - use repo field as the URL
+		url = source.URL
+		goto end
 
-	case "release":
-		// GitHub release asset URL (tag-based)
-		url = dt.URL(fmt.Sprintf("https://github.com/%s/archive/refs/tags/%s.zip", repo, ref))
+	case GitHubSourceType:
+		// GitHub archive URL - works for both branches and tags
+		switch {
+		case si.Ref != "":
+			ref = si.Ref
+		case source.Ref != "":
+			ref = source.Ref
+		default:
+			err = fmt.Errorf("no branch or tag specified in manifest or flags")
+			goto end
+		}
+
+		url = dt.URL(fmt.Sprintf("https://github.com/%s/archive/%s.zip", repo, ref))
 
 	default:
 		err = fmt.Errorf("unsupported source type: %s", source.Type)
@@ -545,4 +552,112 @@ func findTopLevelDir(extractDir dt.DirPath) (topLevelDir dt.DirPath, err error) 
 
 end:
 	return topLevelDir, err
+}
+
+// InstallDemoArgs contains arguments for installing a demo
+type InstallDemoArgs struct {
+	Source    *DemoSource    // Resolved demo source with InstallDir
+	ConfigDir dt.DirPath     // Configuration directory
+	Reinstall bool           // Force reinstallation
+	DryRun    bool           // Dry run mode
+	Writer    cliutil.Writer // For output messages
+}
+
+// InstallDemo orchestrates the installation of a demo from a resolved source
+// It checks if the demo is already installed and either installs or returns existing
+func InstallDemo(args *InstallDemoArgs) (result *InstallResult, err error) {
+	var shouldInstall bool
+	var exists bool
+	var installer *SiteInstaller
+	var manifest *Manifest
+
+	// Check if demo should be installed
+	exists, err = args.Source.InstallDir.Exists()
+	if err != nil {
+		err = fmt.Errorf("failed to check install directory: %w", err)
+		goto end
+	}
+
+	shouldInstall = !exists || args.Reinstall
+
+	// If not installing, return the existing result
+	if !shouldInstall {
+		args.Writer.V2().Printf("Demo path: %s\n", args.Source.InstallDir)
+		args.Writer.Errorf("Demo already installed. Use --reinstall to re-download.\n")
+		result = &InstallResult{
+			InstallDir: args.Source.InstallDir,
+			ConfigFile: dt.FilepathJoin3(args.Source.InstallDir, localsvr.ConfigPath, localsvr.ConfigFilename),
+			SiteName:   string(args.Source.Repo),
+		}
+		err = fmt.Errorf("demo already installed at %s", args.Source.InstallDir)
+		goto end
+	}
+
+	// Build manifest from DemoSource
+	manifest = buildDemoSourceManifest(args.Source)
+
+	// Create and run installer
+	installer = NewSiteInstaller(SiteInstallerArgs{
+		Manifest:   manifest,
+		ConfigDir:  args.ConfigDir,
+		InstallDir: args.Source.InstallDir,
+		SourceDir:  ".",
+		Ref:        args.Source.Ref,
+		Overwrite:  args.Reinstall,
+		DryRun:     args.DryRun,
+		Writer:     args.Writer,
+	})
+
+	// Install demo
+	args.Writer.V2().Printf("Installing demo...\n")
+	result, err = installer.Install()
+
+end:
+	return result, err
+}
+
+// buildDemoSourceManifest creates a manifest from a DemoSource
+func buildDemoSourceManifest(source *DemoSource) (manifest *Manifest) {
+	var slug dt.URLSegment
+	var name string
+	var description string
+	var demoSource DemoSource
+
+	switch source.Type {
+	case GitHubSourceType:
+		repoStr := string(source.Repo)
+		slug = dt.URLSegment(repoStr[strings.LastIndex(repoStr, "/")+1:])
+		name = fmt.Sprintf("XMLUI Demo: %s", slug)
+		description = fmt.Sprintf("Demo from %s @ %s", source.Repo, source.Ref)
+		demoSource = DemoSource{
+			Type: GitHubSourceType,
+			Repo: source.Repo,
+			Ref:  source.Ref,
+		}
+
+	case URLSourceType:
+		slug = urlToSlug(source.URL)
+		name = fmt.Sprintf("XMLUI Demo: %s", slug)
+		description = fmt.Sprintf("Demo from %s", source.URL)
+		demoSource = DemoSource{
+			Type: URLSourceType,
+			URL:  source.URL,
+		}
+	}
+
+	manifest = &Manifest{
+		Version:     1,
+		Slug:        slug,
+		Name:        name,
+		Description: description,
+		Source:      demoSource,
+		Copy: []CopyRule{
+			{
+				From: "**",
+				To:   ".",
+			},
+		},
+	}
+
+	return manifest
 }

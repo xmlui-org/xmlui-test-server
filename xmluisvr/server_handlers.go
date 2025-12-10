@@ -55,7 +55,7 @@ func (svr *Server) serveFile(w http.ResponseWriter, r *http.Request, ep dt.Entry
 		http.NotFound(w, r)
 	}
 	ep = dt.EntryPathJoin(svr.API.Webroot, ep)
-	svr.Printf("Trying to serve: %s\n", localsvr.HomeRelative(string(ep)))
+	svr.Printf("Serving: %s\n", localsvr.HomeRelative(string(ep)))
 	status, err := ep.Status()
 	if err != nil {
 		goto end

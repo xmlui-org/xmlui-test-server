@@ -8,10 +8,10 @@ import (
 type Manifest struct {
 	Schema      dt.URL
 	Version     int
-	Slug        dt.PathSegment
+	Slug        dt.URLSegment
 	Name        string
 	Description string
-	Source      Source
+	Source      DemoSource
 	Copy        []CopyRule
 	Variants    []Variant
 }

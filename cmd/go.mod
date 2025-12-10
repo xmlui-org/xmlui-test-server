@@ -21,3 +21,5 @@ require (
 )
 
 replace github.com/xmlui-org/xmlui-test-server/xmluisvr => ../xmluisvr
+replace github.com/mikeschinkel/go-cliutil => ../../../go-pkgs/go-cliutil
+replace github.com/mikeschinkel/go-dt => ../../../go-pkgs/go-dt

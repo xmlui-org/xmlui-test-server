@@ -99,6 +99,9 @@ var (
 )
 
 const (
+	// GitHubHostname is the hostname for GitHub repositories
+	GitHubHostname dt.InternetDomain = "github.com"
+
 	DemosPath         dt.PathSegment = "demos"
 	WebrootPath       dt.PathSegment = "."
 	DBRootPath        dt.PathSegment = "."
@@ -131,4 +134,42 @@ const (
 var (
 	DefaultSQLite3Database     = filepath.Join(DefaultDBRoot, DefaultSQLite3DBFile)
 	DefaultDBBootstrapFilepath = filepath.Join(DefaultDBRoot, DefaultDBBootstrapFile)
+)
+
+const (
+	// XMLUIAppIndexFilename is the required index file for XMLUI apps
+	XMLUIAppIndexFilename dt.Filename = "index.html"
+
+	// XMLUIAppConfigFilename is the required config file for XMLUI apps
+	XMLUIAppConfigFilename dt.Filename = "config.json"
+)
+
+// XMLUI bundle validation marker strings - contractual invariants in the XMLUI bundle
+const (
+	// XMLUIMarkerUMDExport is the global UMD export name pattern
+	XMLUIMarkerUMDExport = ".xmlui="
+
+	// XMLUIMarkerCSSProps is the XMLUI CSS custom properties prefix
+	XMLUIMarkerCSSProps = "--xmlui-"
+
+	// XMLUIMarkerMarkupError is the XMLUI markup validation error message
+	XMLUIMarkerMarkupError = "Errors found while checking Xmlui markup"
+
+	// XMLUIMarkerFunctionLabel is the diagnostic label for XMLUI functions
+	XMLUIMarkerFunctionLabel = "[xmlui function]"
+
+	// XMLUIMarkerVersion is the version logging string
+	XMLUIMarkerVersion = "XMLUI version"
+)
+
+// XMLUI bundle validation size and count constants
+const (
+	// XMLUIBundleMinSize is the minimum file size for a valid XMLUI bundle (100KB)
+	XMLUIBundleMinSize int64 = 100 * 1024
+
+	// XMLUIBundleMarkerReadSize is the maximum bytes to read for marker detection (50KB)
+	XMLUIBundleMarkerReadSize = 50 * 1024
+
+	// XMLUIBundleMinMarkers is the minimum number of markers required to validate as XMLUI bundle
+	XMLUIBundleMinMarkers = 2
 )

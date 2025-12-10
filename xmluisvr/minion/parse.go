@@ -1,6 +1,7 @@
 package minion
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/mikeschinkel/go-dt"
@@ -11,10 +12,14 @@ import (
 // ParseManifest converts raw cfgldr.Manifest to type-checked runpkg.Manifest
 func ParseManifest(raw *cfgldr.Manifest) (manifest *Manifest, err error) {
 	var schema dt.URL
-	var slug dt.PathSegment
+	var slug dt.URLSegment
+	var branch dt.Identifier
+	var tag dt.Identifier
 	var subdir dt.PathSegments
+	var repo dt.URLSegments
 	var copyRules []CopyRule
 	var variants []Variant
+	var sourceType SourceType
 
 	// Parse Schema URL
 	schema, err = dt.ParseURL(raw.Schema)
@@ -23,8 +28,8 @@ func ParseManifest(raw *cfgldr.Manifest) (manifest *Manifest, err error) {
 		goto end
 	}
 
-	// Parse Slug
-	slug, err = dt.ParsePathSegment(raw.Slug)
+	// Parse Slug (URL-safe segment)
+	slug, err = dt.ParseURLSegment(raw.Slug)
 	if err != nil {
 		err = fmt.Errorf("invalid slug: %w", err)
 		goto end
@@ -47,17 +52,46 @@ func ParseManifest(raw *cfgldr.Manifest) (manifest *Manifest, err error) {
 		goto end
 	}
 
+	// Parse source type
+	sourceType, err = ParseSourceType(raw.Source.Type)
+	if err != nil {
+		err = fmt.Errorf("invalid source type: %w", err)
+		goto end
+	}
+
+	repo, err = dt.ParseURLSegments(raw.Source.Repo)
+	if err != nil {
+		err = fmt.Errorf("invalid repo: %w", err)
+		goto end
+	}
+
+	branch, err = dt.ParseIdentifier(raw.Source.Branch)
+	if err != nil && !errors.Is(err, dt.ErrEmpty) {
+		err = fmt.Errorf("invalid Git branch: %w", err)
+		goto end
+	}
+
+	tag, err = dt.ParseIdentifier(raw.Source.Branch)
+	if err != nil && !errors.Is(err, dt.ErrEmpty) {
+		err = fmt.Errorf("invalid Git tag: %w", err)
+		goto end
+	}
+
+	if branch != "" && tag != "" {
+		err = fmt.Errorf("cannot have both a branch ('%s') and a tag ('%s')", branch, tag)
+		goto end
+	}
+
 	manifest = &Manifest{
 		Schema:      schema,
 		Version:     raw.Version,
 		Slug:        slug,
 		Name:        raw.Name,
 		Description: raw.Description,
-		Source: Source{
-			Type:   raw.Source.Type,
-			Repo:   raw.Source.Repo,
-			Branch: raw.Source.Branch,
-			Tag:    raw.Source.Tag,
+		Source: DemoSource{
+			Type:   sourceType,
+			Repo:   repo,
+			Ref:    branch + tag,
 			Subdir: subdir,
 		},
 		Copy:     copyRules,
@@ -72,43 +106,6 @@ func ParseManifest(raw *cfgldr.Manifest) (manifest *Manifest, err error) {
 
 end:
 	return manifest, err
-}
-
-// ParseRegistry converts raw cfgldr.Registry to type-checked runpkg.Registry
-func ParseRegistry(raw *cfgldr.DemoRegistry) (registry *Registry, err error) {
-	var schema dt.URL
-	var defaultSlug dt.PathSegment
-	var demos []Demo
-
-	// Parse Schema URL
-	schema, err = dt.ParseURL(raw.Schema)
-	if err != nil {
-		err = fmt.Errorf("invalid schema URL: %w", err)
-		goto end
-	}
-
-	// Parse DefaultSlug
-	defaultSlug, err = dt.ParsePathSegment(raw.DefaultSlug)
-	if err != nil {
-		err = fmt.Errorf("invalid default_slug: %w", err)
-		goto end
-	}
-
-	// Parse Demos
-	demos, err = parseDemos(raw.Demos)
-	if err != nil {
-		goto end
-	}
-
-	registry = &Registry{
-		Schema:      schema,
-		Version:     raw.Version,
-		DefaultSlug: defaultSlug,
-		Demos:       demos,
-	}
-
-end:
-	return registry, err
 }
 
 // parseCopyRules converts raw copy rules to type-checked copy rules
@@ -131,13 +128,13 @@ func parseCopyRules(rawRules []cfgldr.CopyRule) (rules []CopyRule, err error) {
 // parseVariants converts raw variants to type-checked variants
 func parseVariants(rawVariants []cfgldr.Variant) (variants []Variant, err error) {
 	var rawVariant cfgldr.Variant
-	var slug dt.PathSegment
+	var slug dt.URLSegment
 	var copyRules []CopyRule
 	var i int
 
 	variants = make([]Variant, len(rawVariants))
 	for i, rawVariant = range rawVariants {
-		slug, err = dt.ParsePathSegment(rawVariant.Slug)
+		slug, err = dt.ParseURLSegment(rawVariant.Slug)
 		if err != nil {
 			err = fmt.Errorf("invalid variant slug: %w", err)
 			goto end
@@ -159,41 +156,9 @@ end:
 	return variants, err
 }
 
-// parseDemos converts raw demos to type-checked demos
-func parseDemos(rawDemos []cfgldr.Demo) (demos []Demo, err error) {
-	var rawDemo cfgldr.Demo
-	var slug dt.PathSegment
-	var manifestURL dt.URL
-	var i int
-
-	demos = make([]Demo, len(rawDemos))
-	for i, rawDemo = range rawDemos {
-		slug, err = dt.ParsePathSegment(rawDemo.Slug)
-		if err != nil {
-			err = fmt.Errorf("invalid demo slug: %w", err)
-			goto end
-		}
-
-		manifestURL, err = dt.ParseURL(rawDemo.ManifestURL)
-		if err != nil {
-			err = fmt.Errorf("invalid manifest URL: %w", err)
-			goto end
-		}
-
-		demos[i] = Demo{
-			Slug:        slug,
-			Name:        rawDemo.Name,
-			ManifestURL: manifestURL,
-		}
-	}
-
-end:
-	return demos, err
-}
-
 // validateManifest performs basic validation on the manifest structure
 func validateManifest(m *Manifest) (err error) {
-	var validTypes map[string]bool
+	var validTypes map[SourceType]bool
 
 	if m.Slug == "" {
 		err = fmt.Errorf("manifest missing required field: slug")
@@ -212,19 +177,13 @@ func validateManifest(m *Manifest) (err error) {
 		goto end
 	}
 
-	// Validate source type (v0 only supports zip and release)
-	validTypes = map[string]bool{
-		"zip":     true,
-		"release": true,
+	// Validate source type
+	validTypes = map[SourceType]bool{
+		GitHubSourceType: true,
+		URLSourceType:    true,
 	}
 	if !validTypes[m.Source.Type] {
-		err = fmt.Errorf("unsupported source type '%s' (v0 supports: zip, release)", m.Source.Type)
-		goto end
-	}
-
-	// Validate that branch OR tag is specified, not both
-	if m.Source.Branch != "" && m.Source.Tag != "" {
-		err = fmt.Errorf("source cannot specify both branch and tag")
+		err = fmt.Errorf("unsupported source type '%s' (supported: github, url)", m.Source.Type)
 		goto end
 	}
 
