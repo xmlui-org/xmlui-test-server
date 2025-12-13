@@ -1,10 +1,12 @@
 package minion
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -15,18 +17,44 @@ import (
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
+// RefType defines the type of a ref (branch, tag, hash, or url)
+type RefType string
+
+const (
+	BranchRefType RefType = "branch"
+	TagRefType    RefType = "tag"
+	HashRefType   RefType = "hash"
+	URLRefType    RefType = "url"
+)
+
 // Demo holds information about an installed demo
 type Demo struct {
-	Domain      dt.InternetDomain `json:"domain"`      // "github.com", "example.com", etc.
-	Org         dt.PathSegment    `json:"org"`         // For GitHub: org name; For URLs: empty or host
-	Repo        dt.PathSegment    `json:"repo"`        // For GitHub: repo name; For URLs: last path segment
-	Branch      dt.PathSegment    `json:"branch"`      // Branch/ref name (for GitHub demos)
-	Path        dt.DirPath        `json:"path"`        // Full path after host (for URL-based demos)
-	FullName    dt.PathSegments   `json:"fullName"`    // Display name: "org/repo" or "host/path"
-	InstallPath dt.DirPath        `json:"installPath"` // Full filesystem path
-	Description string            `json:"description"` // From README
-	Size        int64             `json:"size"`        // Bytes
-	Installed   time.Time         `json:"installed"`   // Last modified
+	Domain      dt.InternetDomain `json:"domain"`               // "github.com", "example.com", etc.
+	Org         dt.PathSegment    `json:"org,omitempty"`        // For GitHub: org name; For URLs: empty or host
+	Repo        dt.PathSegment    `json:"repo,omitempty"`       // For GitHub: repo name; For URLs: last path segment
+	Branch      dt.PathSegment    `json:"branch,omitempty"`     // Branch/ref name (for GitHub demos) - for improving UX
+	Tag         dt.PathSegment    `json:"tag,omitempty"`        // Tag ref name (for GitHub demos) - for improving UX
+	Hash        dt.PathSegment    `json:"hash,omitempty"`       // Hash ref value (for GitHub demos) - for improving UX
+	Ref         dt.Identifier     `json:"ref,omitempty"`        // Internal ref value (branch/tag/hash name)
+	RefType     RefType           `json:"type"`                 // Type of ref: branch, tag, hash, or url
+	Path        dt.DirPath        `json:"path"`                 // Full path after host (for URL-based demos)
+	InstallPath dt.DirPath        `json:"install_path"`         // Full filesystem path
+	Description string            `json:"description"`          // From README
+	Size        int64             `json:"-"`                    // Bytes. TODO show this in JSON when we calculate size
+	Installed   time.Time         `json:"installed"`            // Last modified
+	SourceURL   dt.URL            `json:"source_url,omitempty"` // ZIP URL used at install time
+}
+
+func (d *Demo) FullName() (name string) {
+	switch d.RefType {
+	case BranchRefType, TagRefType, HashRefType:
+		name = fmt.Sprintf("%s#%s", dt.PathSegmentsJoin3(d.Domain, d.Org, d.Repo), d.Ref)
+	case URLRefType:
+		fallthrough
+	default:
+		name = filepath.Join(string(d.Domain), string(d.SourceURL))
+	}
+	return name
 }
 
 // JSON returns a JSON string representation of the Demo
@@ -51,6 +79,19 @@ end:
 	return jsonText
 }
 
+// Valid returns true if the demo has all required files
+func (d *Demo) Valid() bool {
+	return hasDemoFiles(d.InstallPath)
+}
+
+// ValidationErrors returns a list of validation error messages
+func (d *Demo) ValidationErrors() []string {
+	if d.Valid() {
+		return []string{}
+	}
+	return collectValidationErrors(d.InstallPath)
+}
+
 // Demos is a slice of Demo pointers
 type Demos []*Demo
 
@@ -64,32 +105,55 @@ const (
 )
 
 // FullNames returns a slice of full names from the demo list
-func (ds Demos) FullNames() []dt.PathSegments {
-	var names []dt.PathSegments
+func (ds Demos) FullNames() []string {
+	var names []string
 
 	if len(ds) == 0 {
 		goto end
 	}
 
-	names = make([]dt.PathSegments, 0, len(ds))
+	names = make([]string, 0, len(ds))
 
 	for _, d := range ds {
 		if d == nil {
 			continue
 		}
-		names = append(names, d.FullName)
+		names = append(names, d.FullName())
 	}
 
 end:
 	return names
 }
 
-// JSON returns the list as a JSON string
+// demoWithValidation wraps Demo and adds method-computed validation fields for JSON serialization
+type demoWithValidation struct {
+	*Demo            `json:",inline"`
+	Valid            bool     `json:"valid"`
+	ValidationErrors []string `json:"validation_errors"`
+}
+
+// JSON returns the list as a JSON string, including method-computed values
 func (ds Demos) JSON() (jsonText string) {
 	var data []byte
 	var err error
+	var enriched []demoWithValidation
+	var d *Demo
 
-	data, err = json.MarshalIndent(ds, "", "  ")
+	enriched = make([]demoWithValidation, 0, len(ds))
+
+	for _, d = range ds {
+		if d == nil {
+			continue
+		}
+
+		enriched = append(enriched, demoWithValidation{
+			Demo:             d,
+			Valid:            d.Valid(),
+			ValidationErrors: d.ValidationErrors(),
+		})
+	}
+
+	data, err = json.MarshalIndent(enriched, "", "  ")
 	if err != nil {
 		jsonText = "[]"
 		goto end
@@ -125,7 +189,11 @@ type DemoTableWriterArgs struct {
 	ShowIndex bool
 
 	// ShowSize enables the SIZE column displaying human-readable directory sizes.
+	// (Deprecated: use Columns instead)
 	ShowSize bool
+
+	// Columns specifies which columns to display. If empty, defaults to DefaultColumns.
+	Columns []DemoColumn
 
 	// Style allows overriding the default table style (StyleLight).
 	// If nil, StyleLight is used.
@@ -136,19 +204,21 @@ type DemoTableWriterArgs struct {
 func (ds Demos) TableWriter(args DemoTableWriterArgs) (tw table.Writer) {
 	var sortBy DemoSort
 	var timeFormat dt.TimeFormat
-	var demosDir dt.DirPath
-	var homeDir dt.DirPath
 	var rows Demos
-	var pathHeader string
-	var headerPath dt.DirPath
-	var columnConfigs []table.ColumnConfig
+	var columns []DemoColumn
+	var ctx ColumnInfo
+	var headerRow table.Row
 	var colNum int
+	var columnConfigs []table.ColumnConfig
+	var d *Demo
+	var row table.Row
+	var col DemoColumn
+	var meta *ColumnMeta
+	var val string
+	var newColumns []DemoColumn
 
 	tw = table.NewWriter()
-
-	if len(ds) == 0 {
-		goto configure
-	}
+	columnIndex = 0 // Reset counter for this table
 
 	sortBy = args.SortBy
 	if sortBy == "" {
@@ -157,91 +227,83 @@ func (ds Demos) TableWriter(args DemoTableWriterArgs) (tw table.Writer) {
 
 	timeFormat = args.TimeFormat
 	if timeFormat == "" {
-		timeFormat = "2006-01-02"
+		timeFormat = time.DateOnly
 	}
 
-	demosDir = args.DemosDir
-	if demosDir != "" && !demosDir.HasSuffix("/") {
-		demosDir += "/"
-	}
-
-	homeDir = args.HomeDir
-
-	// Work on a copy so callers don't get surprising in-place reordering.
-	rows = make(Demos, len(ds))
-	copy(rows, ds)
-	sortDemos(rows, sortBy, args.SortDesc)
-
-	// Header - indicate the stripped prefix if applicable
-	if demosDir != "" {
-		headerPath = demosDir.TrimSuffix("/")
-		// Replace home directory with ~ for cleaner display
-		if homeDir != "" && headerPath.HasPrefix(homeDir) {
-			headerPath = "~" + headerPath[len(homeDir):]
-		}
-		pathHeader = fmt.Sprintf("PATH (within %s/)", headerPath)
-	} else {
-		pathHeader = "PATH"
-	}
-
-	// Build header row based on options
-	if args.ShowSize {
-		tw.AppendHeader(table.Row{"DEMO", pathHeader, "SIZE", "LAST MODIFIED"})
-	} else {
-		tw.AppendHeader(table.Row{"DEMO", pathHeader, "LAST MODIFIED"})
-	}
-
-	for _, d := range rows {
-		var path dt.DirPath
-		var date string
-		var row table.Row
-
-		if d == nil {
-			continue
-		}
-
-		path = d.InstallPath
-		if demosDir != "" && d.InstallPath.HasPrefix(demosDir) {
-			path = path[len(demosDir):]
-		}
-
-		if !d.Installed.IsZero() {
-			date = d.Installed.Format(string(timeFormat))
-		}
-
-		row = table.Row{d.FullName, path}
+	// Determine columns to display
+	columns = args.Columns
+	if len(columns) == 0 {
+		// Use default columns; if ShowSize is set, add SIZE to defaults
+		columns = make([]DemoColumn, len(DefaultColumns))
+		copy(columns, DefaultColumns)
 		if args.ShowSize {
-			row = append(row, formatSize(d.Size))
+			// Insert SIZE before INSTALLED
+			newColumns = nil
+			for _, col = range columns {
+				if col == DemoColumnInstalled {
+					newColumns = append(newColumns, DemoColumnSize)
+				}
+				newColumns = append(newColumns, col)
+			}
+			columns = newColumns
 		}
-		row = append(row, date)
-		tw.AppendRow(row)
 	}
 
-configure:
-	// Enable auto-index if requested
-	if args.ShowIndex {
-		tw.SetAutoIndex(true)
+	// Setup column context
+	ctx = ColumnInfo{
+		TimeNow:    time.Now(),
+		TimeFormat: timeFormat,
+		HomeDir:    args.HomeDir,
+		DemosDir:   args.DemosDir,
 	}
 
-	// Configure column alignments
+	if len(ds) > 0 {
+		// Work on a copy so callers don't get surprising in-place reordering
+		rows = make(Demos, len(ds))
+		copy(rows, ds)
+		sortDemos(rows, sortBy, args.SortDesc)
+
+		// Build header row from columns
+		headerRow = table.Row{}
+		for _, col = range columns {
+			meta = GetColumnMeta(col)
+			if meta != nil {
+				headerRow = append(headerRow, meta.Header)
+			}
+		}
+		tw.AppendHeader(headerRow)
+
+		// Build data rows
+		for _, d = range rows {
+			if d == nil {
+				continue
+			}
+
+			row = table.Row{}
+			for _, col = range columns {
+				meta = GetColumnMeta(col)
+				if meta != nil {
+					val = meta.ValueFunc(d, &ctx)
+					row = append(row, val)
+				}
+			}
+			tw.AppendRow(row)
+		}
+	}
+
+	// Configure column alignments from registry
+	columnConfigs = []table.ColumnConfig{}
 	colNum = 1
-	columnConfigs = []table.ColumnConfig{
-		{Number: colNum, Align: text.AlignLeft}, // DEMO
-	}
-	colNum++
-	columnConfigs = append(columnConfigs, table.ColumnConfig{
-		Number: colNum, Align: text.AlignLeft, // PATH
-	})
-	colNum++
-	if args.ShowSize {
-		columnConfigs = append(columnConfigs, table.ColumnConfig{
-			Number: colNum, Align: text.AlignRight, // SIZE
-		})
+	for _, col = range columns {
+		meta = GetColumnMeta(col)
+		if meta != nil {
+			columnConfigs = append(columnConfigs, table.ColumnConfig{
+				Number: colNum,
+				Align:  meta.Alignment,
+			})
+		}
 		colNum++
 	}
-	columnConfigs = append(columnConfigs, table.ColumnConfig{
-		Number: colNum, Align: text.AlignRight, // LAST MODIFIED
-	})
 	tw.SetColumnConfigs(columnConfigs)
 
 	// Apply style
@@ -280,7 +342,7 @@ func sortDemos(ds Demos, sortBy DemoSort, desc bool) {
 			if di.Domain != dj.Domain {
 				less = di.Domain < dj.Domain
 			} else {
-				less = di.FullName < dj.FullName
+				less = di.FullName() < dj.FullName()
 			}
 
 		case DateSort:
@@ -288,7 +350,7 @@ func sortDemos(ds Demos, sortBy DemoSort, desc bool) {
 			less = di.Installed.After(dj.Installed)
 
 		default: // NameSort
-			less = di.FullName < dj.FullName
+			less = di.FullName() < dj.FullName()
 		}
 
 		if desc {
@@ -303,10 +365,10 @@ type Logger interface {
 	Warn(msg string, keyvals ...any)
 }
 
-// ListDemosArgs configures the ListDemos function
-type ListDemosArgs struct {
+// FindDemosArgs configures the FindDemos function
+type FindDemosArgs struct {
 	// ConfigDir is typically ~/.config/xmlui (or equivalent).
-	// ListDemos will look inside ConfigDir/"demos".
+	// FindDemos will look inside ConfigDir/"demos".
 	ConfigDir dt.DirPath
 
 	// SortBy controls the sort order; defaults to NameSort if empty/unknown.
@@ -323,14 +385,14 @@ type ListDemosArgs struct {
 	Logger Logger
 }
 
-// ListDemos discovers installed demos and returns them as Demos
-func ListDemos(args *ListDemosArgs) (demos Demos, err error) {
+// FindDemos discovers installed demos and returns them as Demos
+func FindDemos(args *FindDemosArgs) (demos Demos, err error) {
 	var demosDir dt.DirPath
 	var sources []fs.DirEntry
 	var sortBy DemoSort
 
 	if args == nil {
-		err = fmt.Errorf("minion: ListDemosArgs is nil")
+		err = fmt.Errorf("minion: FindDemosArgs is nil")
 		goto end
 	}
 
@@ -373,6 +435,51 @@ end:
 	return demos, err
 }
 
+// extractDescription extracts a description from demo directory README files.
+// It looks for README.md, then README, then README.txt, and extracts the first
+// line starting with '#'. If no README exists, it falls back to the directory name.
+func extractDescription(demoDir dt.DirPath) (desc string) {
+	var readmeFiles = []string{"README.md", "README", "README.txt"}
+	var readmePath dt.Filepath
+	var err error
+	var exists bool
+	var file *os.File
+	var scanner *bufio.Scanner
+	var line string
+	var trimmed string
+
+	for _, filename := range readmeFiles {
+		readmePath = dt.FilepathJoin(demoDir, filename)
+		exists, err = readmePath.Exists()
+		if err != nil || !exists {
+			continue
+		}
+
+		file, err = os.Open(string(readmePath))
+		if err != nil {
+			continue
+		}
+
+		scanner = bufio.NewScanner(file)
+		for scanner.Scan() {
+			line = scanner.Text()
+			trimmed = strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "#") {
+				desc = strings.TrimSpace(strings.TrimLeft(trimmed, "#"))
+				_ = file.Close()
+				return desc
+			}
+		}
+		_ = file.Close()
+		// Found a README but no # line, keep looking
+	}
+
+	// Fallback: use directory base name
+	desc = string(demoDir.Base())
+
+	return desc
+}
+
 // collectDemos collects demos from a source directory using uniform URL-based paths.
 // For GitHub demos (github.com/{org}/{repo}/archive/{ref}/), it also extracts
 // org, repo, and branch metadata for display purposes.
@@ -402,8 +509,8 @@ func collectDemos(logger Logger, sourceDir dt.DirPath, domain dt.InternetDomain,
 
 		dirPath = de.DirPath()
 
-		// Check if this is a demo directory (contains index.html and config.json)
-		if !hasDemoFiles(dirPath) {
+		// Only collect directories that look like demo installations
+		if !looksLikeDemoDir(dirPath) {
 			continue
 		}
 
@@ -416,13 +523,16 @@ func collectDemos(logger Logger, sourceDir dt.DirPath, domain dt.InternetDomain,
 			InstallPath: dirPath,
 		}
 
-		// For GitHub, parse out org/repo/branch from path structure
-		// Path format: {org}/{repo}/archive/{ref}
+		// For GitHub, parse out org/repo/ref from path structure
 		if domain == localsvr.GitHubHostname {
 			parseGitHubPath(demo, relPath)
 		} else {
-			demo.FullName = dt.PathSegmentsJoin(domain, relPath)
+			// For non-GitHub demos, set RefType to URLRefType
+			demo.RefType = URLRefType
 		}
+
+		// Extract description from README
+		demo.Description = extractDescription(dirPath)
 
 		// Get last modified time
 		stat, err = dirPath.Stat()
@@ -443,21 +553,54 @@ func collectDemos(logger Logger, sourceDir dt.DirPath, domain dt.InternetDomain,
 	return demos
 }
 
-// parseGitHubPath extracts org, repo, and branch from a GitHub demo path.
-// Expected path format: {org}/{repo}/archive/{ref}
+// parseGitHubPath extracts org, repo, and ref metadata from a GitHub demo path.
+// Expected path format: {org}/{repo}/archive/{ref} or {org}/{repo}/refs/tags/{ref}
+// Sets Org, Repo, Ref, RefType, and UX fields (Branch/Tag/Hash).
+// TODO: This is violating the Parse*() pattern which is parse takes an input and returns an output and an error.
+//
+//	Need to fix this to follow the pattern. OR, this is NOT a parse but instead a Normalize*() method of Demo?
 func parseGitHubPath(demo *Demo, relPath dt.DirPath) {
-	parts := strings.Split(string(relPath), "/")
+	var parts []string
 
-	// Need at least 4 parts: org/repo/archive/ref
-	if len(parts) >= 4 && parts[2] == "archive" {
-		demo.Org = dt.PathSegment(parts[0])
-		demo.Repo = dt.PathSegment(parts[1])
-		demo.Branch = dt.PathSegment(parts[3])
-		demo.FullName = dt.PathSegmentsJoin3(demo.Domain, demo.Org, demo.Repo)
-	} else {
-		// Fallback for non-standard GitHub paths
-		demo.FullName = dt.PathSegmentsJoin(demo.Domain, relPath)
+	parts = strings.Split(string(relPath), "/")
+
+	// Need at least 4 parts: org/repo/{archive|refs}/...
+	if len(parts) < 4 {
+		goto end
 	}
+
+	demo.Org = dt.PathSegment(parts[0])
+	demo.Repo = dt.PathSegment(parts[1])
+
+	if parts[2] == "archive" && len(parts) >= 4 {
+		// Standard GitHub archive format: org/repo/archive/{ref}
+		// Refs from archive are typically branches or tags
+		demo.Ref = dt.Identifier(parts[3])
+
+		// TODO: We need to discover what type is actually is and not just "default" to whatever is easy.
+		demo.RefType = BranchRefType // Default to branch for archive
+		demo.Branch = dt.PathSegment(parts[3])
+		goto end
+	}
+
+	if parts[2] == "refs" && len(parts) >= 5 {
+		// Explicit refs format: org/repo/refs/heads/{branch} or org/repo/refs/tags/{tag}
+		demo.Ref = dt.Identifier(parts[4])
+		if parts[3] == "heads" {
+			demo.RefType = BranchRefType
+			demo.Branch = dt.PathSegment(parts[4])
+			demo.Ref = dt.Identifier(demo.Branch)
+		} else if parts[3] == "tags" {
+			demo.RefType = TagRefType
+			demo.Tag = dt.PathSegment(parts[4])
+			demo.Ref = dt.Identifier(demo.Tag)
+		}
+		goto end
+
+	}
+
+end:
+	return
 }
 
 // hasDemoFiles checks if a directory is a demo directory
@@ -467,22 +610,95 @@ func hasDemoFiles(dir dt.DirPath) (hasFiles bool) {
 	var err error
 
 	indexPath := dt.FilepathJoin(dir, localsvr.XMLUIAppIndexFilename)
-	configPath := dt.FilepathJoin(dir, localsvr.XMLUIAppConfigFilename)
+	//configPath := dt.FilepathJoin(dir, localsvr.XMLUIAppConfigFilename)
 
 	exists, err = indexPath.Exists()
 	if err != nil || !exists {
 		goto end
 	}
 
-	exists, err = configPath.Exists()
-	if err != nil || !exists {
-		goto end
-	}
+	//exists, err = configPath.Exists()
+	//if err != nil || !exists {
+	//	goto end
+	//}
 
 	hasFiles = true
 
 end:
 	return hasFiles
+}
+
+// looksLikeDemoDir returns true if a directory appears to be a demo installation.
+// Uses multiple signals to detect demo directories even if they're incomplete:
+// - Strong signal: Main.xmlui file exists
+// - Moderate signal: Any .xmlui file exists
+// - Moderate signal: .xmlui config directory exists
+func looksLikeDemoDir(dir dt.DirPath) (isDemo bool) {
+	var exists bool
+	var err error
+	var entries []dt.DirEntry
+	var entry dt.DirEntry
+	var mainPath dt.Filepath
+	var xmluiConfigDir dt.DirPath
+
+	// Strong signal: Check for Main.xmlui
+	mainPath = dt.FilepathJoin(dir, localsvr.XMLUIAppMainFilename)
+	exists, err = mainPath.Exists()
+	if err == nil && exists {
+		isDemo = true
+		goto end
+	}
+
+	// Moderate signal: Check for .xmlui config directory
+	xmluiConfigDir = dt.DirPathJoin(dir, localsvr.ConfigPath)
+	exists, err = xmluiConfigDir.Exists()
+	if err == nil && exists {
+		isDemo = true
+		goto end
+	}
+
+	// Moderate signal: Check for any .xmlui file
+	entries, err = dt.DirPathRead(dir)
+	if err != nil {
+		goto end
+	}
+
+	for _, entry = range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if entry.Ext() == localsvr.XMLUIFileExtension {
+			isDemo = true
+			goto end
+		}
+	}
+
+end:
+	return isDemo
+}
+
+// collectValidationErrors performs validation and returns error messages
+func collectValidationErrors(dirPath dt.DirPath) []string {
+	var errs []string
+	var exists bool
+	var err error
+
+	// Check for required files
+	indexPath := dt.FilepathJoin(dirPath, localsvr.XMLUIAppIndexFilename)
+	exists, err = indexPath.Exists()
+	if err != nil || !exists {
+		errs = append(errs, "Missing index.html")
+	}
+
+	configPath := dt.FilepathJoin(dirPath, localsvr.XMLUIAppConfigFilename)
+	exists, err = configPath.Exists()
+	if err != nil || !exists {
+		errs = append(errs, "Missing config.json")
+	}
+
+	// Could add more checks here (Main.xmlui, bundle validation, etc.)
+
+	return errs
 }
 
 // formatSize returns a human-readable size string (e.g., "1.2 MB", "345 KB")

@@ -8,6 +8,7 @@ import (
 
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
 )
 
 // zipExtensionRegex matches .zip extension case-insensitively
@@ -45,7 +46,7 @@ func ResolveDemoSource(args *ResolveDemoSourceArgs) (ds *DemoSource, err error) 
 
 	// Case 1: No args or just "." — use default demo
 	if sourceArg == "" || strings.TrimSpace(sourceArg) == "." {
-		ds.Repo = dt.URLSegmentsJoin("xmlui-org", "hello") // Default demo
+		ds.Repo = dt.URLSegmentsJoin(localsvr.DefaultDemoOrg, localsvr.DefaultDemoRepo)
 		goto end
 	}
 
@@ -68,7 +69,7 @@ func ResolveDemoSource(args *ResolveDemoSourceArgs) (ds *DemoSource, err error) 
 	case 2:
 		ds.Repo = dt.URLSegmentsJoin(parts[0], parts[1])
 	case 1:
-		ds.Repo = dt.URLSegmentsJoin("xmlui-org", parts[0])
+		ds.Repo = dt.URLSegmentsJoin(localsvr.DefaultDemoOrg, parts[0])
 	default:
 		err = fmt.Errorf("invalid repository format: %s (expected 'repo' or 'org/repo')", sourceArg)
 		goto end
@@ -110,7 +111,7 @@ func FindValidBranch(ds *DemoSource, configDir dt.DirPath, branches []string, wr
 		archiveURL := githubArchiveURL(ds.Repo, branch)
 		installPath = urlToInstallPath(configDir, archiveURL)
 
-		slug := ds.Repo.SliceScalar(ds.Repo.LastIndex("/")+1, -1, "/")
+		slug := ds.Repo.Base()
 
 		// Build temporary manifest for validation
 		manifest = &Manifest{
@@ -190,7 +191,7 @@ func urlToInstallPath(configDir dt.DirPath, urlStr string) (installPath dt.DirPa
 	// Build path as: host/path (without scheme)
 	pathWithoutScheme = parsedURL.Host
 	if parsedURL.Path != "" {
-		pathWithoutScheme = strings.TrimPrefix(parsedURL.Path, "/")
+		pathWithoutScheme = pathWithoutScheme + parsedURL.Path
 	}
 
 	// Remove .zip extension if present (case-insensitive)

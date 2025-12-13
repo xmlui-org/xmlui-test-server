@@ -109,6 +109,14 @@ const (
 	BootstrapFilename dt.Filename    = "bootstrap.sql"
 )
 
+// Demo defaults - used by demo command for resolving repositories and branches
+const (
+	DefaultDemoType     = "zip"
+	DefaultDemoOrg      = "xmlui-org"
+	DefaultDemoRepo     = "xmlui-todo"
+	DefaultDemoBranches = "demo,main" // Comma-separated list of branches to try in order
+)
+
 const (
 	ConfigPath     = "." + ConfigSlug
 	ConfigFilename = dt.Filename(ConfigFile)
@@ -142,6 +150,12 @@ const (
 
 	// XMLUIAppConfigFilename is the required config file for XMLUI apps
 	XMLUIAppConfigFilename dt.Filename = "config.json"
+
+	// XMLUIAppMainFilename is the main XMLUI markup file - strong indicator of an XMLUI app
+	XMLUIAppMainFilename dt.Filename = "Main.xmlui"
+
+	// XMLUIFileExtension is the file extension for XMLUI markup files
+	XMLUIFileExtension dt.FileExt = ".xmlui"
 )
 
 // XMLUI bundle validation marker strings - contractual invariants in the XMLUI bundle

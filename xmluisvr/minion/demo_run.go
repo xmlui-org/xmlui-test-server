@@ -2,6 +2,7 @@ package minion
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mikeschinkel/go-cfgstore"
 	"github.com/mikeschinkel/go-cliutil"
@@ -15,6 +16,7 @@ type RunDemoArgs struct {
 	BranchArg      string         // User's branch argument
 	Reinstall      bool           // Force reinstall
 	SkipValidation bool           // Skip validation
+	NoStart        bool           // Install only, don't start server
 	DryRun         bool           // Dry run mode
 	Writer         cliutil.Writer // For output messages
 }
@@ -69,7 +71,7 @@ func RunDemo(args *RunDemoArgs) (result *DemoResult, err error) {
 	if demoSource.Type == GitHubSourceType {
 		branches := []string{string(demoSource.Ref)}
 		if demoSource.Ref == "" {
-			branches = []string{"main", "master", "develop"}
+			branches = strings.Split(localsvr.DefaultDemoBranches, ",")
 		}
 		demoSource, err = FindValidBranch(demoSource, configDir, branches, args.Writer)
 		if err != nil {
@@ -88,7 +90,16 @@ func RunDemo(args *RunDemoArgs) (result *DemoResult, err error) {
 		Writer:    args.Writer,
 	})
 	if err != nil && err.Error() == fmt.Sprintf("demo already installed at %s", demoSource.InstallDir) {
-		// Demo already installed - provide user notification with ErrOmitUserNotify pattern
+		// Demo already installed
+		switch {
+		case args.NoStart:
+			// Not running the demo, just verifying installation
+			args.Writer.Printf("Demo already installed. Use --reinstall to re-download.\n")
+		case demoSource.Type == GitHubSourceType:
+			args.Writer.Printf("Using installed demo from github.com/%s\n", demoSource.Repo)
+		default:
+			args.Writer.Printf("Using installed demo from %s\n", demoSource.URL)
+		}
 		webroot, err = DetectWebroot(demoSource.InstallDir)
 		if err != nil {
 			goto end
@@ -98,18 +109,10 @@ func RunDemo(args *RunDemoArgs) (result *DemoResult, err error) {
 			ConfigFile: dt.FilepathJoin3(demoSource.InstallDir, ".xmlui", "localsvr.json"),
 			SiteName:   string(demoSource.Repo),
 		}
-		args.Writer.V2().Printf("Demo path: %s\n", installResult.InstallDir)
-		args.Writer.Errorf("Demo already installed. Use --reinstall to re-download.\n")
-		result = &DemoResult{
-			InstallDir: installResult.InstallDir,
-			Webroot:    webroot,
-			ConfigFile: installResult.ConfigFile,
-			SiteName:   installResult.SiteName,
-			Source:     demoSource,
-		}
-		err = cliutil.ErrOmitUserNotify
-		goto end
-	} else if err != nil {
+		// Clear error so execution continues normally
+		err = nil
+	}
+	if err != nil {
 		goto end
 	}
 

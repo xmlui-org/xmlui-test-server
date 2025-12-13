@@ -277,7 +277,7 @@ func (si *SiteInstaller) Download() (contentDir dt.DirPath, err error) {
 	var extractDir dt.DirPath
 
 	// Build the download URL based on source type
-	downloadURL, err = si.downloadURL()
+	downloadURL, err = si.composeDownloadURL()
 	if err != nil {
 		goto end
 	}
@@ -335,8 +335,7 @@ end:
 
 }
 
-func (si *SiteInstaller) downloadURL() (url dt.URL, err error) {
-	var repo string
+func (si *SiteInstaller) composeDownloadURL() (url dt.URL, err error) {
 	var ref dt.Identifier
 	var source = si.Manifest.Source
 
@@ -358,7 +357,7 @@ func (si *SiteInstaller) downloadURL() (url dt.URL, err error) {
 			goto end
 		}
 
-		url = dt.URL(fmt.Sprintf("https://github.com/%s/archive/%s.zip", repo, ref))
+		url = dt.URL(fmt.Sprintf("https://github.com/%s/archive/%s.zip", source.Repo, ref))
 
 	default:
 		err = fmt.Errorf("unsupported source type: %s", source.Type)
@@ -369,14 +368,30 @@ end:
 	return url, err
 }
 
+// newAuthenticatedRequest creates an HTTP request with GitHub authentication if GITHUB_TOKEN is set
+func newAuthenticatedRequest(method, url string) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for GITHUB_TOKEN environment variable
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "token "+token)
+	}
+
+	return req, nil
+}
+
 // ValidateRepo checks if the repository archive exists using HTTP HEAD
 func (si *SiteInstaller) ValidateRepo() (err error) {
 	var url dt.URL
 	var client *http.Client
+	var req *http.Request
 	var resp *http.Response
 	var repoURL string
 
-	url, err = si.downloadURL()
+	url, err = si.composeDownloadURL()
 	if err != nil {
 		goto end
 	}
@@ -388,19 +403,26 @@ func (si *SiteInstaller) ValidateRepo() (err error) {
 		Timeout: 10 * time.Second,
 	}
 
-	resp, err = client.Head(string(url))
+	req, err = newAuthenticatedRequest(http.MethodHead, string(url))
+	if err != nil {
+		err = fmt.Errorf("failed to create request: %w", err)
+		goto end
+	}
+
+	resp, err = client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("failed to check repository: %w", err)
 		goto end
 	}
 	defer dt.CloseOrLog(resp.Body)
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		err = fmt.Errorf("repository not found: %s", repoURL)
 		goto end
 	}
 
-	if resp.StatusCode != 200 {
+	// Accept 200 OK or 302 Found (GitHub redirects archive URLs)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound {
 		err = fmt.Errorf("unexpected status code %d when checking repository: %s", resp.StatusCode, repoURL)
 		goto end
 	}
@@ -412,6 +434,7 @@ end:
 // downloadFile downloads a file from URL to destination path
 func downloadFile(url dt.URL, destPath dt.Filepath) (err error) {
 	var client *http.Client
+	var req *http.Request
 	var resp *http.Response
 	var out *os.File
 
@@ -419,7 +442,13 @@ func downloadFile(url dt.URL, destPath dt.Filepath) (err error) {
 		Timeout: 30 * time.Second,
 	}
 
-	resp, err = url.GET(client)
+	req, err = newAuthenticatedRequest(http.MethodGet, string(url))
+	if err != nil {
+		err = fmt.Errorf("failed to create request: %w", err)
+		goto end
+	}
+
+	resp, err = client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("failed to download: %w", err)
 		goto end
@@ -583,7 +612,6 @@ func InstallDemo(args *InstallDemoArgs) (result *InstallResult, err error) {
 	// If not installing, return the existing result
 	if !shouldInstall {
 		args.Writer.V2().Printf("Demo path: %s\n", args.Source.InstallDir)
-		args.Writer.Errorf("Demo already installed. Use --reinstall to re-download.\n")
 		result = &InstallResult{
 			InstallDir: args.Source.InstallDir,
 			ConfigFile: dt.FilepathJoin3(args.Source.InstallDir, localsvr.ConfigPath, localsvr.ConfigFilename),

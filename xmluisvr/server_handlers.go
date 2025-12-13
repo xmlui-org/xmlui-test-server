@@ -62,7 +62,7 @@ func (svr *Server) serveFile(w http.ResponseWriter, r *http.Request, ep dt.Entry
 	}
 	switch status {
 	case dt.IsMissingEntry:
-		svr.writeErrorf("File not found: %s\n", ep)
+		svr.writeErrorf("404 - File not found.\n")
 		http.NotFound(w, r)
 	case dt.IsFileEntry:
 		// TODO Make this safe from path traversal exploit
