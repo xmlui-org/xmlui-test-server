@@ -1,7 +1,5 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/mikeschinkel/go-cfgstore v0.4.0 h1:7hqtmsKxaqXHkglfZPwlJu3j335/hGsGfj1r1BodY2g=
-github.com/mikeschinkel/go-cfgstore v0.4.0/go.mod h1:CGIAdOzGAXPULDEAwuRF88B0EP13kxSn4faOOUwEIeQ=
 github.com/mikeschinkel/go-cliutil v0.3.0 h1:e8mHPp+zaJ3DSNSgRiH3aRB2kpsFQgRh3VC5D062YLk=
 github.com/mikeschinkel/go-cliutil v0.3.0/go.mod h1:uYKSilFUqy6RGtdVexaWxZ5CVfVvdzRhREBPCSontW8=
 github.com/mikeschinkel/go-doterr v0.1.2 h1:JbA/n8ZDwkS9uknOYd4yETzZx9X8Z/GmnuTnvYqzric=
@@ -14,8 +12,8 @@ github.com/mikeschinkel/go-dt/dtx v0.2.1 h1:OsFs0kHuEZuSJwGyTI+LDZVABf5pAvcPXDuE
 github.com/mikeschinkel/go-dt/dtx v0.2.1/go.mod h1:mFuyP/9gMzCKaLXhFWOXHngR2ou2jun7yE67NZRBhW8=
 github.com/mikeschinkel/go-fsfix v0.2.1 h1:r/czvij27hSoRggtbD6uP3wp7Nt3kzVZvh2ikoKo2F4=
 github.com/mikeschinkel/go-fsfix v0.2.1/go.mod h1:WttCjdD0GIlXObKALv1Lqv9xeavks4qrjfjs3yP8ISU=
-github.com/mikeschinkel/go-jsontest v0.2.0 h1:NytbQAXIYxqH3sGbLqiKArWHufYOY/MMbAjnAir8E+g=
-github.com/mikeschinkel/go-jsontest v0.2.0/go.mod h1:X5MDx+7HMdgrd7PPmhJoVxxm68MoLHpyEMo78pu75Ho=
+github.com/mikeschinkel/go-jsontest v0.1.2 h1:iwC8qhK6TSBJ0o++CLsuPlGYNkxFxulkI9DdBOSSzvg=
+github.com/mikeschinkel/go-jsontest v0.1.2/go.mod h1:X5MDx+7HMdgrd7PPmhJoVxxm68MoLHpyEMo78pu75Ho=
 github.com/mikeschinkel/go-logutil v0.2.1 h1:jYwZCRSA/rlXXNP4grOerzTkMx1OcLZQjarjSJqVFzg=
 github.com/mikeschinkel/go-logutil v0.2.1/go.mod h1:1yNSU+v0f+8anOjTq8hvHG7/A2FcRfVmXfnHTorHNk4=
 github.com/mikeschinkel/go-pathvars v0.2.1 h1:Zr1SWVQQT+aEcV46/kel52eiUed7igLeh0GJ8OBNUIE=

@@ -7,7 +7,7 @@ import (
 
 	"github.com/mikeschinkel/go-cfgstore"
 	"github.com/stretchr/testify/require"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 // TestDirectJSONLoad tests loading the config directly from JSON without cfgstore

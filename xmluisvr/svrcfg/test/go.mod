@@ -1,9 +1,9 @@
-module cfgldr_test
+module svrcfg_test
 
 go 1.25.3
 
 require (
-	github.com/mikeschinkel/go-cfgstore v0.4.0
+	github.com/mikeschinkel/go-cfgstore v0.4.1
 	github.com/mikeschinkel/go-dt v0.3.3
 	github.com/mikeschinkel/go-fsfix v0.2.1
 	github.com/mikeschinkel/go-jsontest v0.1.2
@@ -29,3 +29,9 @@ require (
 )
 
 replace github.com/xmlui-org/xmlui-test-server/xmluisvr => ../../
+
+replace github.com/mikeschinkel/go-cfgstore/test => ../../../../../go-pkgs/go-cfgstore/test
+
+replace github.com/mikeschinkel/go-cfgstore => ../../../../../go-pkgs/go-cfgstore
+
+replace github.com/mikeschinkel/go-cfgstore/cstest => ../../../../../go-pkgs/go-cfgstore/cstest

@@ -10,6 +10,8 @@ import (
 	"github.com/mikeschinkel/go-dt/appinfo"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -62,11 +64,13 @@ func (c *RootConfigV1) RootConfig() {}
 type rootConfigV1Base struct {
 	Schema       string           `json:"$schema"`
 	Version      int              `json:"version"`
+	Project      string           `json:"project"`
 	ServerConfig *ServerConfigV1  `json:"server"`
 	DirType      cfgstore.DirType `json:"-"`
 }
 
 type RootConfigV1Args struct {
+	Project      string `json:"project"`
 	ServerConfig *ServerConfigV1
 	DBConfig     DatabaseConfig
 }
@@ -76,6 +80,7 @@ func NewRootConfigV1(args RootConfigV1Args) *RootConfigV1 {
 		rootConfigV1Base: rootConfigV1Base{
 			Schema:       RootConfigV1Schema,
 			Version:      RootConfigV1Version,
+			Project:      args.Project,
 			ServerConfig: args.ServerConfig,
 		},
 		DBConfig: args.DBConfig,
@@ -271,6 +276,7 @@ end:
 }
 
 type GenerateConfigArgs struct {
+	Project     string   // Name of project
 	Webroot     string   // Path to webroot directory (default: ".")
 	DBPath      string   // Path to database file (default: "db/data.db")
 	DBBootstrap string   // Path to bootstrap SQL file (default: "db/bootstrap.sql")
@@ -283,6 +289,16 @@ type GenerateConfigArgs struct {
 // Any zero-value parameters will use defaults from the cfgldr constants.
 func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 	// Apply defaults
+	if args.Project == "" {
+		wd, err := dt.Getwd()
+		switch err != nil {
+		case true:
+			args.Project = "Project name goes here"
+		default:
+			caser := cases.Title(language.Und)
+			args.Project = caser.String(string(wd.Base()))
+		}
+	}
 	if args.Webroot == "" {
 		args.Webroot = localsvr.DefaultWebroot
 	}
@@ -317,6 +333,7 @@ func GenerateConfig(args GenerateConfigArgs) *RootConfigV1 {
 
 	// Create and return root config
 	return NewRootConfigV1(RootConfigV1Args{
+		Project:      args.Project,
 		ServerConfig: server,
 		DBConfig:     db,
 	})

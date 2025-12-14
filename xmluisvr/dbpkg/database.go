@@ -13,8 +13,8 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-pathvars"
 	"github.com/mikeschinkel/go-sqlparams"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 //type ConnectStyle string

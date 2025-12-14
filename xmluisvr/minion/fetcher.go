@@ -3,7 +3,7 @@ package minion
 import (
 	"fmt"
 
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 // FetchManifest downloads, parses, and type-checks a manifest from the given URL

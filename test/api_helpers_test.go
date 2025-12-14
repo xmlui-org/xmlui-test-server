@@ -27,8 +27,8 @@ import (
 	"github.com/mikeschinkel/go-testutil"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 const (

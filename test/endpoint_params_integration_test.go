@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 // fullAPIConfig represents a complete API configuration for integration testing

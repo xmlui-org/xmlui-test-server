@@ -12,8 +12,8 @@ import (
 	"github.com/mikeschinkel/go-jsontest"
 	_ "github.com/mikeschinkel/go-jsontest/pipefuncs"
 	"github.com/stretchr/testify/require"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 // TestCreateGoldenData is not a real test but a convenience to write a "Golden" file we can cherry pick from

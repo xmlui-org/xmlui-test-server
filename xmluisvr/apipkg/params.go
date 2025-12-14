@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/mikeschinkel/go-pathvars"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 var (

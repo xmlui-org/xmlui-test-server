@@ -17,9 +17,9 @@ import (
 	"github.com/mikeschinkel/go-sqlparams"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apipkg"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apiresp"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 func (svr *Server) handleRootFunc() http.HandlerFunc {

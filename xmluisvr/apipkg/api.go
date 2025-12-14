@@ -50,9 +50,9 @@ import (
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-pathvars"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 // API represents a configured API instance with endpoints, routing, and metadata.

@@ -8,8 +8,8 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/appinfo"
 	"github.com/mikeschinkel/go-logutil"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 // RunArgs contains all the configuration and dependencies needed to run the server.
@@ -52,7 +52,7 @@ end:
 	return projectDir, err
 }
 
-// ParseRunArgs creates a complete RunArgs from a partial RunArgs and cfgldr.Options.
+// ParseRunArgs creates a complete RunArgs from a partial RunArgs and svrcfg.Options.
 // This function extracts the RunArgs construction logic from RunCLI
 // so it can be reused by commands that need to call Run() directly.
 //

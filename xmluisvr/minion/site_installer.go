@@ -12,8 +12,8 @@ import (
 	"github.com/mikeschinkel/go-cliutil"
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtglob"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 // SiteInstaller handles the installation of a demo from a manifest
@@ -214,6 +214,7 @@ func (si *SiteInstaller) generateConfig(installDir dt.DirPath, configFile dt.Fil
 
 	// Generate config using the public cfgldr function
 	cfg = cfgldr.GenerateConfig(cfgldr.GenerateConfigArgs{
+		Project:     "",
 		Webroot:     webrootPath,
 		DBPath:      string(dbPath),
 		DBBootstrap: string(bootstrapPath),

@@ -6,10 +6,10 @@ import (
 
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtglob"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
-// ParseManifest converts raw cfgldr.Manifest to type-checked runpkg.Manifest
+// ParseManifest converts raw svrcfg.Manifest to type-checked runpkg.Manifest
 func ParseManifest(raw *cfgldr.Manifest) (manifest *Manifest, err error) {
 	var schema dt.URL
 	var slug dt.URLSegment

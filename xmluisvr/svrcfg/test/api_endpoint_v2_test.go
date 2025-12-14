@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/mikeschinkel/go-cfgstore"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
 func TestAPIEndpointV2_UnmarshalJSON_ArrayParams(t *testing.T) {

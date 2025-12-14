@@ -10,12 +10,12 @@ import (
 	"github.com/mikeschinkel/go-dt"
 	"github.com/mikeschinkel/go-dt/dtx"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/apipkg"
-	"github.com/xmlui-org/xmlui-test-server/xmluisvr/cfgldr"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/dbpkg"
 	"github.com/xmlui-org/xmlui-test-server/xmluisvr/localsvr"
+	"github.com/xmlui-org/xmlui-test-server/xmluisvr/svrcfg"
 )
 
-// ParseOptions converts raw options from cfgldr.Options into
+// ParseOptions converts raw options from svrcfg.Options into
 // validated localsvr.Options. This method performs validation and type conversion
 // for all XMLUI Test Server options.
 func ParseOptions(cfgOpts *cfgldr.Options) (opts *localsvr.Options, err error) {
@@ -146,6 +146,7 @@ end:
 // ParseServerArgs contains the dependencies needed to create a Server instance.
 type ParseServerArgs struct {
 	Database     dbpkg.Database      // Database connection
+	Project      string              // Project name
 	Options      *localsvr.Options   // Parsed and validated options
 	ServerConfig cfgldr.ServerConfig // Server configuration
 	Writer       cliutil.Writer
